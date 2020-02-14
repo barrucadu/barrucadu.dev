@@ -67,8 +67,19 @@ runDB ma = do
 
 -- | Convert a 'DB.Event' to an 'API.Event'.
 toAPIEvent :: DB.Event -> API.Event
-toAPIEvent = undefined
+toAPIEvent event = API.Event
+  { API.eventUUID        = Just (DB.eventUUID event)
+  , API.eventTimestamp   = Just (DB.eventCreatedAt event)
+  , API.eventStatus      = DB.eventStatus event
+  , API.eventDescription = DB.eventDescription event
+  , API.eventTag         = DB.eventTag event
+  , API.eventTagUrl      = DB.eventTagUrl event
+  , API.eventDetailsUrl  = DB.eventDetailsUrl event
+  }
 
 -- | Convert a 'DB.Project' to an 'API.Project'.
 toAPIProject :: DB.Project -> API.Project
-toAPIProject = undefined
+toAPIProject project = API.Project
+  { API.projectName = DB.projectName project
+  , API.projectUrl  = DB.projectUrl project
+  }
