@@ -1,0 +1,18 @@
+cabal-version:       >=1.10
+
+name:                event-api-server
+version:             0.0.0.0
+author:              Michael Walker
+maintainer:          mike@barrucadu.co.uk
+build-type:          Simple
+
+executable event-api-server
+  main-is:             Main.hs
+  build-depends:       base
+                     , selda
+                     , selda-postgresql
+                     , servant
+                     , servant-auth
+                     , servant-auth-server
+                     , servant-server
+  default-language:    Haskell2010
