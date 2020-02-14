@@ -47,7 +47,7 @@ data Project = Project
   , projectCreatedAt :: UTCTime
   , projectValid     :: Bool
   , projectPublic    :: Bool
-  , projectURL       :: Maybe Text
+  , projectUrl       :: Maybe Text
   }
   deriving (Eq, Ord, Read, Show, Generic)
 
@@ -55,7 +55,7 @@ instance SqlRow Project
 
 -- | Database table and selectors for projects.
 projects :: Table Project
-(projects, dbProjectName :*: dbProjectCreatedAt :*: dbProjectValid :*: dbProjectPublic :*: dbProjectURL) =
+(projects, dbProjectName :*: dbProjectCreatedAt :*: dbProjectValid :*: dbProjectPublic :*: dbProjectUrl) =
   tableWithSelectors "projects" [#projectName :- primary]
 
 -- | Build events.  This adds a project association to the 'API.Event'

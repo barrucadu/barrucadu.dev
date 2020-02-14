@@ -60,7 +60,7 @@ instance FromJWT Token
 -- db.
 data Project = Project
   { projectName :: Text
-  , projectURL  :: Maybe Text
+  , projectUrl  :: Maybe Text
   }
   deriving (Eq, Ord, Read, Show, Generic)
 
