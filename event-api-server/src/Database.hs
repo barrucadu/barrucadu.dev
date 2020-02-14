@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedLabels  #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -85,29 +86,77 @@ events :: Table Event
 -- | List projects (in lexicographical order, up to the limit) which
 -- are public and valid.
 listProjects :: Int -> SeldaM db [Project]
-listProjects _lim = undefined
+listProjects lim = query . limit 0 lim $ do
+  p <- select projects
+  restrict (p ! dbProjectPublic)
+  restrict (p ! dbProjectValid)
+  pure p
 
 -- | List events (in reverse chronological order, up to the limit)
 -- which belong to a public, valid, project.
 listEvents :: Int -> SeldaM db [Event]
-listEvents _lim = undefined
+listEvents lim = query . limit 0 lim $ do
+  e <- select events
+  _ <- innerJoin (\p -> p ! dbProjectName .== e ! dbEventProject) $ do
+    p <- select projects
+    restrict (p ! dbProjectPublic)
+    restrict (p ! dbProjectValid)
+    pure p
+  pure e
 
 -- | Find a project by name.
 findProject :: Text -> SeldaM db (Result Project)
-findProject _projectName = undefined
+findProject projectName_ = do
+  results <- query $ do
+    p <- select projects
+    restrict (p ! dbProjectName .== literal projectName_)
+    pure p
+  pure $ case results of
+    [project] -> case (projectPublic project, projectValid project) of
+      (False, _) -> Missing
+      (_, False) -> Invalid
+      _          -> Found project
+    _ -> Missing
 
 -- | Find an event by UUID.
 findEvent :: UUID -> SeldaM db (Result Event)
-findEvent _uuid = undefined
+findEvent uuid = do
+  results <- query $ do
+    e <- select events
+    restrict (e ! dbEventUUID .== literal uuid)
+    p <- innerJoin (\p -> p ! dbProjectName .== e ! dbEventProject) (select projects)
+    pure (e :*: p)
+  pure $ case results of
+    [event :*: project] -> case (projectPublic project, projectValid project) of
+      (False, _) -> Missing
+      (_, False) -> Invalid
+      _          -> Found event
+    _ -> Missing
 
 -- | List events (in reverse chronological order, up to the limit)
 -- which belong to the given project (if it's public and valid).
 listEventsForProject :: Text -> Int -> SeldaM db (Result [Event])
-listEventsForProject _projectName _lim = undefined
+listEventsForProject projectName_ lim = findProject projectName_ >>= \case
+  Found _ -> fmap Found . query . limit 0 lim $ do
+    e <- select events
+    restrict (e ! dbEventProject .== literal projectName_)
+    pure e
+  Missing -> pure Missing
+  Invalid -> pure Invalid
 
 -- | Check if a token is valid for a project.
 validateToken :: Text -> API.Token -> SeldaM db Auth
-validateToken _projectName _token = undefined
+validateToken projectName_ token = do
+  results <- query $ do
+    t <- select tokens
+    restrict (t ! dbTokenUUID .== literal (API.tokenUUID token))
+    restrict (t ! dbTokenOwner .== literal (API.tokenOwner token))
+    restrict (t ! dbTokenProject .== literal projectName_)
+    restrict (t ! dbTokenValid)
+    pure t
+  pure $ case results of
+    [_] -> Permitted
+    _   -> Forbidden
 
 -- | Three-way bool (trool?) which separates "thing doesn't exist"
 -- from "thing is invalid".
@@ -116,3 +165,4 @@ data Result a = Found a | Invalid | Missing
 
 -- | Bool alternative for token validity.
 data Auth = Permitted | Forbidden
+  deriving (Eq, Ord, Read, Show, Enum, Bounded)
