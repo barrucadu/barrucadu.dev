@@ -10,6 +10,8 @@ executable event-api-server
   main-is:             Main.hs
   build-depends:       base
                      , aeson
+                     , exceptions
+                     , mtl
                      , selda
                      , selda-postgresql
                      , servant

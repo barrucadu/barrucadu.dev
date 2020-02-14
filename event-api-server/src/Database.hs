@@ -8,7 +8,7 @@ module Database where
 
 import           Data.Time.Clock              (UTCTime)
 import           Data.UUID                    (UUID)
-import           Database.Selda
+import           Database.Selda               hiding (Result)
 import           Database.Selda.MakeSelectors
 import           GHC.Generics                 (Generic)
 
@@ -79,3 +79,40 @@ instance SqlRow Event
 events :: Table Event
 (events, dbEventUUID :*: dbEventCreatedAt :*: dbEventProject :*: dbEventStatus :*: dbEventDescription :*: dbEventTag :*: dbEventTagUrl :*: dbEventDetailsUrl) =
   tableWithSelectors "events" [#eventUUID :- primary, #eventProject :- foreignKey projects dbProjectName]
+
+-------------------------------------------------------------------------------
+
+-- | List projects (in lexicographical order, up to the limit) which
+-- are public and valid.
+listProjects :: Int -> SeldaM db [Project]
+listProjects _lim = undefined
+
+-- | List events (in reverse chronological order, up to the limit)
+-- which belong to a public, valid, project.
+listEvents :: Int -> SeldaM db [Event]
+listEvents _lim = undefined
+
+-- | Find a project by name.
+findProject :: Text -> SeldaM db (Result Project)
+findProject _projectName = undefined
+
+-- | Find an event by UUID.
+findEvent :: UUID -> SeldaM db (Result Event)
+findEvent _uuid = undefined
+
+-- | List events (in reverse chronological order, up to the limit)
+-- which belong to the given project (if it's public and valid).
+listEventsForProject :: Text -> Int -> SeldaM db (Result [Event])
+listEventsForProject _projectName _lim = undefined
+
+-- | Check if a token is valid for a project.
+validateToken :: Text -> API.Token -> SeldaM db Auth
+validateToken _projectName _token = undefined
+
+-- | Three-way bool (trool?) which separates "thing doesn't exist"
+-- from "thing is invalid".
+data Result a = Found a | Invalid | Missing
+  deriving (Eq, Ord, Read, Show)
+
+-- | Bool alternative for token validity.
+data Auth = Permitted | Forbidden
