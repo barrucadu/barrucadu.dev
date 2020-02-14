@@ -7,11 +7,14 @@
 
 module Database where
 
-import           Data.Time.Clock              (UTCTime)
-import           Data.UUID                    (UUID)
+import           Control.Monad.IO.Class       (liftIO)
+import           Data.Time.Clock              (UTCTime, getCurrentTime)
+import           Data.UUID                    (UUID, fromWords)
 import           Database.Selda               hiding (Result)
 import           Database.Selda.MakeSelectors
 import           GHC.Generics                 (Generic)
+import           System.Random.TF             (newTFGen)
+import           System.Random.TF.Gen         (RandomGen (next))
 
 import qualified API
 
@@ -157,6 +160,33 @@ validateToken projectName_ token = do
   pure $ case results of
     [_] -> Permitted
     _   -> Forbidden
+
+-- | Create an event, generating a fresh UUID and using the current
+-- time.
+createEvent :: Text -> API.Event -> SeldaM db Event
+createEvent projectName_ event = do
+  now <- liftIO getCurrentTime
+  gen <- liftIO newTFGen
+  let (w0, gen')   = next gen
+  let (w1, gen'')  = next gen'
+  let (w2, gen''') = next gen''
+  let (w3, _)      = next gen'''
+  createEvent' projectName_ event now (fromWords w0 w1 w2 w3)
+
+-- | Create an event, using the given time and UUID.
+createEvent' :: Text -> API.Event -> UTCTime -> UUID -> SeldaM db Event
+createEvent' projectName_ event now uuid = insert_ events [e] >> pure e where
+  e = Event
+      { eventUUID        = uuid
+      , eventCreatedAt   = now
+      , eventProject     = projectName_
+      , eventStatus      = API.eventStatus event
+      , eventDescription = API.eventDescription event
+      , eventTag         = API.eventTag event
+      , eventTagUrl      = API.eventTagUrl event
+      , eventDetailsUrl  = API.eventDetailsUrl event
+      }
+
 
 -- | Three-way bool (trool?) which separates "thing doesn't exist"
 -- from "thing is invalid".

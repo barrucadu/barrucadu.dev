@@ -4,6 +4,7 @@
 
 module Server where
 
+import           Control.Monad             (join)
 import           Control.Monad.Catch       (MonadCatch, MonadMask, MonadThrow)
 import           Control.Monad.Error.Class (MonadError, throwError)
 import           Control.Monad.IO.Class    (MonadIO, liftIO)
@@ -54,9 +55,9 @@ getProjectEvents project count = runDB (DB.listEventsForProject project (toLimit
   DB.Missing -> throwError err404
 
 postProjectEvent :: Text -> AuthResult API.Token -> API.Event -> ServerT (Post '[JSON] API.Event) App
-postProjectEvent projectName (Authenticated token) _event = runDB (DB.validateToken projectName token) >>= \case
-  DB.Permitted -> undefined
-  DB.Forbidden -> throwError err403
+postProjectEvent projectName (Authenticated token) event = join . runDB $ DB.validateToken projectName token >>= \case
+  DB.Permitted -> pure . toAPIEvent <$> DB.createEvent projectName event
+  DB.Forbidden -> pure (throwError err403)
 postProjectEvent _ _ _ = throwError err401
 
 -- | Run a database action.
