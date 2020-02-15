@@ -148,16 +148,17 @@ createEvent' projectName_ token event now uuid = insert_ events [e] >> pure e wh
 
 -------------------------------------------------------------------------------
 
--- | List projects (in lexicographical order, up to the limit) which
--- are public and valid.
+-- | List projects (in ascending lexicographical order, up to the
+-- limit) which are public and valid.
 listProjects :: Int -> SeldaM db [Project]
 listProjects lim = query . limit 0 lim $ do
   p <- select projects
   restrict (p ! dbProjectPublic)
   restrict (p ! dbProjectValid)
+  order (p ! dbProjectName) ascending
   pure p
 
--- | List events (in reverse chronological order, up to the limit)
+-- | List events (in descending chronological order, up to the limit)
 -- which belong to a public, valid, project.
 listEvents :: Int -> SeldaM db [Event]
 listEvents lim = query . limit 0 lim $ do
@@ -167,6 +168,7 @@ listEvents lim = query . limit 0 lim $ do
     restrict (p ! dbProjectPublic)
     restrict (p ! dbProjectValid)
     pure p
+  order (e ! dbEventCreatedAt) descending
   pure e
 
 -- | Find a project by name.
@@ -214,7 +216,7 @@ findToken' uuid = fmap listToMaybe . query $ do
   restrict (t ! dbTokenUUID .== literal uuid)
   pure t
 
--- | List events (in reverse chronological order, up to the limit)
+-- | List events (in descending chronological order, up to the limit)
 -- which belong to the given project (if it's public and valid).
 listEventsForProject :: Text -> Int -> Maybe UTCTime -> SeldaM db (Result [Event])
 listEventsForProject projectName_ lim since = findProject projectName_ >>= \case
@@ -224,6 +226,7 @@ listEventsForProject projectName_ lim since = findProject projectName_ >>= \case
     case since of
       Just startTime -> restrict (e ! dbEventCreatedAt .>= literal startTime)
       Nothing        -> pure ()
+    order (e ! dbEventCreatedAt) descending
     pure e
   Missing -> pure Missing
   Invalid -> pure Invalid
