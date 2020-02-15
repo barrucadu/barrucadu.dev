@@ -21,3 +21,10 @@ TODO
 ### API
 
 TODO
+
+
+event-api-resource
+------------------
+
+Python code for the Concourse resource type to interact with the
+`event-api-server`.
