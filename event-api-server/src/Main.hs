@@ -179,6 +179,7 @@ showEvent :: Maybe DB.Event -> IO ()
 showEvent (Just event) = do
   putStrLn $ "uuid:        " ++ show (DB.eventUUID event)
   putStrLn $ "created at:  " ++ show (DB.eventCreatedAt event)
+  putStrLn $ "token:       " ++ show (DB.eventToken event)
   putStrLn $ "project:     " ++ T.unpack (DB.eventProject event)
   putStrLn $ "status:      " ++ show (DB.eventStatus event)
   putStrLn $ "description: " ++ T.unpack (DB.eventDescription event)

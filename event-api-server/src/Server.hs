@@ -56,7 +56,7 @@ getProjectEvents project count = runDB (DB.listEventsForProject project (toLimit
 
 postProjectEvent :: Text -> AuthResult API.Token -> API.Event -> ServerT (Post '[JSON] API.Event) App
 postProjectEvent projectName (Authenticated token) event = join . runDB $ DB.validateToken projectName token >>= \case
-  DB.Permitted -> pure . toAPIEvent <$> DB.createEvent projectName event
+  DB.Permitted -> pure . toAPIEvent <$> DB.createEvent projectName token event
   DB.Forbidden -> pure (throwError err403)
 postProjectEvent _ _ _ = throwError err401
 

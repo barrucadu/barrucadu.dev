@@ -67,6 +67,7 @@ projects :: Table Project
 data Event = Event
   { eventUUID        :: UUID
   , eventCreatedAt   :: UTCTime
+  , eventToken       :: UUID
   , eventProject     :: Text
   , eventStatus      :: API.Status
   , eventDescription :: Text
@@ -81,8 +82,8 @@ instance SqlRow Event
 
 -- | Database table and selectors for events.
 events :: Table Event
-(events, dbEventUUID :*: dbEventCreatedAt :*: dbEventProject :*: dbEventStatus :*: dbEventDescription :*: dbEventTag :*: dbEventTagUrl :*: dbEventDetailsUrl) =
-  tableWithSelectors "events" [#eventUUID :- primary, #eventProject :- foreignKey projects dbProjectName]
+(events, dbEventUUID :*: dbEventCreatedAt :*: dbEventToken :*: dbEventProject :*: dbEventStatus :*: dbEventDescription :*: dbEventTag :*: dbEventTagUrl :*: dbEventDetailsUrl) =
+  tableWithSelectors "events" [#eventUUID :- primary, #eventToken :- foreignKey tokens dbTokenUUID, #eventProject :- foreignKey projects dbProjectName]
 
 -------------------------------------------------------------------------------
 
@@ -124,18 +125,19 @@ createProject' public project now = insert_ projects [p] >> pure p where
 
 -- | Create an event, generating a fresh UUID and using the current
 -- time.
-createEvent :: Text -> API.Event -> SeldaM db Event
-createEvent projectName_ event = do
+createEvent :: Text -> API.Token -> API.Event -> SeldaM db Event
+createEvent projectName_ token event = do
   now  <- liftIO getCurrentTime
   uuid <- liftIO genUUID
-  createEvent' projectName_ event now uuid
+  createEvent' projectName_ token event now uuid
 
 -- | Create an event, using the given time and UUID.
-createEvent' :: Text -> API.Event -> UTCTime -> UUID -> SeldaM db Event
-createEvent' projectName_ event now uuid = insert_ events [e] >> pure e where
+createEvent' :: Text -> API.Token -> API.Event -> UTCTime -> UUID -> SeldaM db Event
+createEvent' projectName_ token event now uuid = insert_ events [e] >> pure e where
   e = Event
       { eventUUID        = uuid
       , eventCreatedAt   = now
+      , eventToken       = API.tokenUUID token
       , eventProject     = projectName_
       , eventStatus      = API.eventStatus event
       , eventDescription = API.eventDescription event
