@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+
+import json
+import os
+import requests
+import sys
+import urllib.parse
+
+script_input = json.loads(sys.stdin.read())
+
+uri = script_input["source"].get("uri", "https://event-api.barrucadu.dev")
+project = script_input["source"]["project"]
+token = script_input["source"]["token"]
+path = script_input["params"]["path"]
+status = script_input["params"]["status"]
+description = script_input["params"]["description"]
+source_dir = sys.argv[1]
+
+link = None
+if script_input["params"].get("show_link", True):
+    BUILD_TEAM_NAME = os.environ["BUILD_TEAM_NAME"]
+    BUILD_PIPELINE_NAME = os.environ["BUILD_PIPELINE_NAME"]
+    BUILD_JOB_NAME = os.environ["BUILD_JOB_NAME"]
+    BUILD_NAME = os.environ["BUILD_NAME"]
+    link = script_input["params"].get(
+        "link",
+        f"https://cd.barrucadu.dev/teams/{BUILD_TEAM_NAME}/pipelines/{BUILD_PIPELINE_NAME}/jobs/{BUILD_JOB_NAME}/builds/{BUILD_NAME}",
+    )
+
+if status not in ["Ok", "Failure", "Error"]:
+    print("params.status should be one of Ok, Failure, Error.", file=sys.stderr)
+    sys.exit(1)
+
+tag = None
+tag_url = None
+try:
+    with open(f"{source_dir}/{path}/tag", "rb") as file:
+        tag = file.read().decode("utf-8")
+    with open(f"{source_dir}/{path}/tag_url", "rb") as file:
+        tag_url = file.read().decode("utf-8")
+except FileNotFoundError:
+    pass
+
+in_event = {"status": status, "description": description}
+
+if tag:
+    in_event["tag"] = tag
+if tag_url:
+    in_event["tagUrl"] = tag_url
+if link:
+    in_event["detailsUrl"] = link
+
+r = requests.post(
+    f"{uri}/project/{urllib.parse.quote(project)}/event",
+    headers={"Authorization": f"Bearer {token}"},
+    json=in_event,
+)
+r.raise_for_status()
+out_event = r.json()
+
+out = {
+    "version": {"uuid": out_event["uuid"]},
+    "metadata": [{"name": k, "value": v} for k, v in out_event.items()],
+}
+
+print(json.dumps(out))
