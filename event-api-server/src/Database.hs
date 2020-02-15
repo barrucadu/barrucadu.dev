@@ -8,15 +8,15 @@
 module Database where
 
 import           Control.Monad.IO.Class       (liftIO)
+import           Data.Maybe                   (listToMaybe)
 import           Data.Time.Clock              (UTCTime, getCurrentTime)
-import           Data.UUID                    (UUID, fromWords)
+import           Data.UUID                    (UUID)
 import           Database.Selda               hiding (Result)
 import           Database.Selda.MakeSelectors
 import           GHC.Generics                 (Generic)
-import           System.Random.TF             (newTFGen)
-import           System.Random.TF.Gen         (RandomGen (next))
 
 import qualified API
+import           Util
 
 -- | Create the database.
 makedb :: SeldaM db ()
@@ -53,7 +53,7 @@ data Project = Project
   , projectPublic    :: Bool
   , projectUrl       :: Maybe Text
   }
-  deriving (Eq, Ord, Read, Show, Generic)
+ deriving (Eq, Ord, Read, Show, Generic)
 
 instance SqlRow Project
 
@@ -86,6 +86,66 @@ events :: Table Event
 
 -------------------------------------------------------------------------------
 
+-- | Create a token, generating a fresh UUID and using the current
+-- time.
+createToken :: Text -> Text -> SeldaM db Token
+createToken projectName_ owner = do
+  now  <- liftIO getCurrentTime
+  uuid <- liftIO genUUID
+  createToken' projectName_ owner now uuid
+
+-- | Create a token, using the given time and UUID.
+createToken' :: Text -> Text -> UTCTime -> UUID -> SeldaM db Token
+createToken' projectName_ owner now uuid = insert_ tokens [t] >> pure t where
+  t = Token
+      { tokenUUID      = uuid
+      , tokenCreatedAt = now
+      , tokenValid     = True
+      , tokenProject   = projectName_
+      , tokenOwner     = owner
+      }
+
+-- | Create a project, using the current time.
+createProject :: Bool -> API.Project -> SeldaM db Project
+createProject public project = do
+  now <- liftIO getCurrentTime
+  createProject' public project now
+
+-- | Create a project, using the given time.
+createProject' :: Bool -> API.Project -> UTCTime -> SeldaM db Project
+createProject' public project now = insert_ projects [p] >> pure p where
+  p = Project
+      { projectName      = API.projectName project
+      , projectCreatedAt = now
+      , projectValid     = True
+      , projectPublic    = public
+      , projectUrl       = API.projectUrl project
+      }
+
+-- | Create an event, generating a fresh UUID and using the current
+-- time.
+createEvent :: Text -> API.Event -> SeldaM db Event
+createEvent projectName_ event = do
+  now  <- liftIO getCurrentTime
+  uuid <- liftIO genUUID
+  createEvent' projectName_ event now uuid
+
+-- | Create an event, using the given time and UUID.
+createEvent' :: Text -> API.Event -> UTCTime -> UUID -> SeldaM db Event
+createEvent' projectName_ event now uuid = insert_ events [e] >> pure e where
+  e = Event
+      { eventUUID        = uuid
+      , eventCreatedAt   = now
+      , eventProject     = projectName_
+      , eventStatus      = API.eventStatus event
+      , eventDescription = API.eventDescription event
+      , eventTag         = API.eventTag event
+      , eventTagUrl      = API.eventTagUrl event
+      , eventDetailsUrl  = API.eventDetailsUrl event
+      }
+
+-------------------------------------------------------------------------------
+
 -- | List projects (in lexicographical order, up to the limit) which
 -- are public and valid.
 listProjects :: Int -> SeldaM db [Project]
@@ -109,17 +169,19 @@ listEvents lim = query . limit 0 lim $ do
 
 -- | Find a project by name.
 findProject :: Text -> SeldaM db (Result Project)
-findProject projectName_ = do
-  results <- query $ do
-    p <- select projects
-    restrict (p ! dbProjectName .== literal projectName_)
-    pure p
-  pure $ case results of
-    [project] -> case (projectPublic project, projectValid project) of
-      (False, _) -> Missing
-      (_, False) -> Invalid
-      _          -> Found project
-    _ -> Missing
+findProject projectName_ = findProject' projectName_ >>= \case
+  Just project -> case (projectPublic project, projectValid project) of
+    (False, _) -> pure Missing
+    (_, False) -> pure Invalid
+    _          -> pure (Found project)
+  _ -> pure Missing
+
+-- | Find a project by name, returning even private and invalid ones.
+findProject' :: Text -> SeldaM db (Maybe Project)
+findProject' projectName_ = fmap listToMaybe . query $ do
+  p <- select projects
+  restrict (p ! dbProjectName .== literal projectName_)
+  pure p
 
 -- | Find an event by UUID.
 findEvent :: UUID -> SeldaM db (Result Event)
@@ -135,6 +197,20 @@ findEvent uuid = do
       (_, False) -> Invalid
       _          -> Found event
     _ -> Missing
+
+-- | Find an event by UUID, returning even private and invalid ones.
+findEvent' :: UUID -> SeldaM db (Maybe Event)
+findEvent' uuid = fmap listToMaybe . query $ do
+  e <- select events
+  restrict (e ! dbEventUUID .== literal uuid)
+  pure e
+
+-- | Find a token by UUID, returning even private and invalid ones.
+findToken' :: UUID -> SeldaM db (Maybe Token)
+findToken' uuid = fmap listToMaybe . query $ do
+  t <- select tokens
+  restrict (t ! dbTokenUUID .== literal uuid)
+  pure t
 
 -- | List events (in reverse chronological order, up to the limit)
 -- which belong to the given project (if it's public and valid).
@@ -161,32 +237,17 @@ validateToken projectName_ token = do
     [_] -> Permitted
     _   -> Forbidden
 
--- | Create an event, generating a fresh UUID and using the current
--- time.
-createEvent :: Text -> API.Event -> SeldaM db Event
-createEvent projectName_ event = do
-  now <- liftIO getCurrentTime
-  gen <- liftIO newTFGen
-  let (w0, gen')   = next gen
-  let (w1, gen'')  = next gen'
-  let (w2, gen''') = next gen''
-  let (w3, _)      = next gen'''
-  createEvent' projectName_ event now (fromWords w0 w1 w2 w3)
+-- | Mark a project as invalid.
+invalidateProject :: Text -> SeldaM db Bool
+invalidateProject projectName_ = do
+  n <- update projects (\p -> p ! dbProjectName .== literal projectName_) (\p -> with p [dbProjectValid := literal False])
+  pure (n == 1)
 
--- | Create an event, using the given time and UUID.
-createEvent' :: Text -> API.Event -> UTCTime -> UUID -> SeldaM db Event
-createEvent' projectName_ event now uuid = insert_ events [e] >> pure e where
-  e = Event
-      { eventUUID        = uuid
-      , eventCreatedAt   = now
-      , eventProject     = projectName_
-      , eventStatus      = API.eventStatus event
-      , eventDescription = API.eventDescription event
-      , eventTag         = API.eventTag event
-      , eventTagUrl      = API.eventTagUrl event
-      , eventDetailsUrl  = API.eventDetailsUrl event
-      }
-
+-- | Mark a token as invalid.
+invalidateToken :: UUID -> SeldaM db Bool
+invalidateToken uuid = do
+  n <- update tokens (\t -> t ! dbTokenUUID .== literal uuid) (\t -> with t [dbTokenValid := literal False])
+  pure (n == 1)
 
 -- | Three-way bool (trool?) which separates "thing doesn't exist"
 -- from "thing is invalid".

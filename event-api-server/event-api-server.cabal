@@ -10,6 +10,8 @@ executable event-api-server
   main-is:             Main.hs
   build-depends:       base
                      , aeson
+                     , base64-bytestring
+                     , bytestring
                      , exceptions
                      , mtl
                      , selda
@@ -22,6 +24,7 @@ executable event-api-server
                      , tf-random
                      , time
                      , uuid
+                     , warp
   other-modules:       API
                      , Database
                      , Server
