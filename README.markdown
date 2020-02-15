@@ -4,7 +4,7 @@ barrucadu.dev
 frontend
 --------
 
-$LANGUAGE code for the simple server which renders the front page of
+Python code for the simple server which renders the front page of
 barrucadu.dev.
 
 
