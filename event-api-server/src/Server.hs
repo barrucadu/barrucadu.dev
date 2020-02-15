@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 
@@ -48,11 +49,20 @@ getProject projectName = runDB (DB.findProject projectName) >>= \case
   DB.Invalid -> throwError err410
   DB.Missing -> throwError err404
 
-getProjectEvents :: Text -> Maybe Int -> ServerT (Get '[JSON] [API.Event]) App
-getProjectEvents project count = runDB (DB.listEventsForProject project (toLimit count)) >>= \case
-  DB.Found events -> pure (map toAPIEvent events)
-  DB.Invalid -> throwError err410
-  DB.Missing -> throwError err404
+getProjectEvents :: Text -> Maybe Int -> Maybe UUID -> ServerT (Get '[JSON] [API.Event]) App
+getProjectEvents project count since = join . runDB $ case since of
+    Just uuid -> DB.findEvent uuid >>= \case
+      DB.Found event -> go (Just (DB.eventCreatedAt event))
+      DB.Invalid -> pure (throwError err410)
+      DB.Missing -> pure (throwError err404)
+    Nothing -> go Nothing
+  where
+    go startTime = do
+      res <- DB.listEventsForProject project (toLimit count) startTime
+      pure $ case res of
+        DB.Found events -> pure (map toAPIEvent events)
+        DB.Invalid      -> throwError err410
+        DB.Missing      -> throwError err404
 
 postProjectEvent :: Text -> AuthResult API.Token -> API.Event -> ServerT (Post '[JSON] API.Event) App
 postProjectEvent projectName (Authenticated token) event = join . runDB $ DB.validateToken projectName token >>= \case

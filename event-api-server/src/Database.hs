@@ -216,11 +216,14 @@ findToken' uuid = fmap listToMaybe . query $ do
 
 -- | List events (in reverse chronological order, up to the limit)
 -- which belong to the given project (if it's public and valid).
-listEventsForProject :: Text -> Int -> SeldaM db (Result [Event])
-listEventsForProject projectName_ lim = findProject projectName_ >>= \case
+listEventsForProject :: Text -> Int -> Maybe UTCTime -> SeldaM db (Result [Event])
+listEventsForProject projectName_ lim since = findProject projectName_ >>= \case
   Found _ -> fmap Found . query . limit 0 lim $ do
     e <- select events
     restrict (e ! dbEventProject .== literal projectName_)
+    case since of
+      Just startTime -> restrict (e ! dbEventCreatedAt .>= literal startTime)
+      Nothing        -> pure ()
     pure e
   Missing -> pure Missing
   Invalid -> pure Invalid

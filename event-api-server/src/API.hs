@@ -23,7 +23,7 @@ import           Util
 -- GET /event/:uuid
 -- GET /projects
 -- GET /project/:name
--- GET /project/:name/events?count=:count
+-- GET /project/:name/events?count=:count&since=:uuid
 -- POST /project/:name/event
 -- @
 type Api =
@@ -34,7 +34,7 @@ type Api =
 
 type ProjectApi =
        Get '[JSON] Project
-  :<|> "events" :> QueryParam "count" Int :> Get '[JSON] [Event]
+  :<|> "events" :> QueryParam "count" Int :> QueryParam "since" UUID :> Get '[JSON] [Event]
   :<|> "event" :> Auth '[JWT] Token :> ReqBody '[JSON] Event :> Post '[JSON] Event
 
 -- | Authentication token supplied on write requests.  Project name
