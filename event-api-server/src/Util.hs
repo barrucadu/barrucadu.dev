@@ -12,6 +12,7 @@ import           Text.Read            (readMaybe)
 -- | Drop the prefix, downcase the next letter
 fieldLabelModifier :: String -> String -> String
 fieldLabelModifier prefix fieldName = case stripPrefix prefix fieldName of
+  Just "UUID" -> "uuid"
   Just (c:cs) -> toLower c : cs
   _           -> fieldName
 
