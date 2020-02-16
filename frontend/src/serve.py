@@ -84,6 +84,7 @@ def munge_event(now, event):
     else:
         event["relative_timestamp"] = then.strftime("%b %d")
 
+    event["status_image"] = f"status-{event['status'].lower()}.png"
 
 @app.route("/")
 def index():
