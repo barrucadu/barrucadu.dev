@@ -160,16 +160,16 @@ listProjects lim = query . limit 0 lim $ do
 
 -- | List events (in descending chronological order, up to the limit)
 -- which belong to a public, valid, project.
-listEvents :: Int -> SeldaM db [Event]
-listEvents lim = query . limit 0 lim $ do
+listEvents :: Int -> SeldaM db [(Project, Event)]
+listEvents lim = fmap (map (\(p :*: e) -> (p, e))) . query . limit 0 lim $ do
   e <- select events
-  _ <- innerJoin (\p -> p ! dbProjectName .== e ! dbEventProject) $ do
+  p <- innerJoin (\p -> p ! dbProjectName .== e ! dbEventProject) $ do
     p <- select projects
     restrict (p ! dbProjectPublic)
     restrict (p ! dbProjectValid)
     pure p
   order (e ! dbEventCreatedAt) descending
-  pure e
+  pure (p :*: e)
 
 -- | Find a project by name.
 findProject :: Text -> SeldaM db (Result Project)
@@ -188,7 +188,7 @@ findProject' projectName_ = fmap listToMaybe . query $ do
   pure p
 
 -- | Find an event by UUID.
-findEvent :: UUID -> SeldaM db (Result Event)
+findEvent :: UUID -> SeldaM db (Result (Project, Event))
 findEvent uuid = do
   results <- query $ do
     e <- select events
@@ -199,7 +199,7 @@ findEvent uuid = do
     [event :*: project] -> case (projectPublic project, projectValid project) of
       (False, _) -> Missing
       (_, False) -> Invalid
-      _          -> Found event
+      _          -> Found (project, event)
     _ -> Missing
 
 -- | Find an event by UUID, returning even private and invalid ones.
@@ -218,9 +218,9 @@ findToken' uuid = fmap listToMaybe . query $ do
 
 -- | List events (in descending chronological order, up to the limit)
 -- which belong to the given project (if it's public and valid).
-listEventsForProject :: Text -> Int -> Maybe UTCTime -> SeldaM db (Result [Event])
+listEventsForProject :: Text -> Int -> Maybe UTCTime -> SeldaM db (Result (Project, [Event]))
 listEventsForProject projectName_ lim since = findProject projectName_ >>= \case
-  Found _ -> fmap Found . query . limit 0 lim $ do
+  Found project -> fmap (\es -> Found (project, es)) . query . limit 0 lim $ do
     e <- select events
     restrict (e ! dbEventProject .== literal projectName_)
     case since of
@@ -233,17 +233,19 @@ listEventsForProject projectName_ lim since = findProject projectName_ >>= \case
 
 -- | Check if a token is valid for a project.
 validateToken :: Text -> API.Token -> SeldaM db Auth
-validateToken projectName_ token = do
-  results <- query $ do
-    t <- select tokens
-    restrict (t ! dbTokenUUID .== literal (API.tokenUUID token))
-    restrict (t ! dbTokenOwner .== literal (API.tokenOwner token))
-    restrict (t ! dbTokenProject .== literal projectName_)
-    restrict (t ! dbTokenValid)
-    pure t
-  pure $ case results of
-    [_] -> Permitted
-    _   -> Forbidden
+validateToken projectName_ token = findProject' projectName_ >>= \case
+  Just project -> do
+    results <- query $ do
+      t <- select tokens
+      restrict (t ! dbTokenUUID .== literal (API.tokenUUID token))
+      restrict (t ! dbTokenOwner .== literal (API.tokenOwner token))
+      restrict (t ! dbTokenProject .== literal projectName_)
+      restrict (t ! dbTokenValid)
+      pure t
+    pure $ case results of
+      [_] -> Permitted project
+      _   -> Forbidden
+  Nothing -> pure Forbidden
 
 -- | Mark a project as invalid.
 invalidateProject :: Text -> SeldaM db Bool
@@ -263,5 +265,5 @@ data Result a = Found a | Invalid | Missing
   deriving (Eq, Ord, Read, Show)
 
 -- | Bool alternative for token validity.
-data Auth = Permitted | Forbidden
-  deriving (Eq, Ord, Read, Show, Enum, Bounded)
+data Auth = Permitted Project | Forbidden
+  deriving (Eq, Ord, Read, Show)

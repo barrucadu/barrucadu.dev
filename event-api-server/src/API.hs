@@ -70,12 +70,13 @@ instance ToJSON Project where
 instance FromJSON Project where
   parseJSON = AT.genericParseJSON (AT.defaultOptions { AT.fieldLabelModifier = fieldLabelModifier "project" })
 
--- | Build event.  Any timestamp or UUID sent in the initial POST is
--- ignored: these are generated when the event is inserted into the
--- database.
+-- | Build event.  Any project, timestamp, or UUID sent in the initial
+-- POST is ignored: these are generated when the event is inserted
+-- into the database.
 data Event = Event
   { eventUUID        :: Maybe UUID
   , eventTimestamp   :: Maybe UTCTime
+  , eventProject     :: Maybe Project
   , eventStatus      :: Status
   , eventDescription :: Text
   , eventTag         :: Maybe Text

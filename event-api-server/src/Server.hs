@@ -32,11 +32,11 @@ apiServer = getEvents :<|> getEvent :<|> getProjects :<|> projectApiServer where
     getProject name :<|> getProjectEvents name :<|> postProjectEvent name
 
 getEvents :: Maybe Int -> ServerT (Get '[JSON] [API.Event]) App
-getEvents count = map toAPIEvent <$> runDB (DB.listEvents (toLimit count))
+getEvents count = map (uncurry toAPIEvent) <$> runDB (DB.listEvents (toLimit count))
 
 getEvent :: UUID -> ServerT (Get '[JSON] API.Event) App
 getEvent uuid = runDB (DB.findEvent uuid) >>= \case
-  DB.Found event -> pure (toAPIEvent event)
+  DB.Found (project, event) -> pure (toAPIEvent project event)
   DB.Invalid -> throwError err410
   DB.Missing -> throwError err404
 
@@ -50,23 +50,23 @@ getProject projectName = runDB (DB.findProject projectName) >>= \case
   DB.Missing -> throwError err404
 
 getProjectEvents :: Text -> Maybe Int -> Maybe UUID -> ServerT (Get '[JSON] [API.Event]) App
-getProjectEvents project count since = join . runDB $ case since of
+getProjectEvents projectName count since = join . runDB $ case since of
     Just uuid -> DB.findEvent uuid >>= \case
-      DB.Found event -> go (Just (DB.eventCreatedAt event))
+      DB.Found (_, event) -> go (Just (DB.eventCreatedAt event))
       DB.Invalid -> pure (throwError err410)
       DB.Missing -> pure (throwError err404)
     Nothing -> go Nothing
   where
     go startTime = do
-      res <- DB.listEventsForProject project (toLimit count) startTime
+      res <- DB.listEventsForProject projectName (toLimit count) startTime
       pure $ case res of
-        DB.Found events -> pure (map toAPIEvent events)
-        DB.Invalid      -> throwError err410
-        DB.Missing      -> throwError err404
+        DB.Found (project, events) -> pure (map (toAPIEvent project) events)
+        DB.Invalid                 -> throwError err410
+        DB.Missing                 -> throwError err404
 
 postProjectEvent :: Text -> AuthResult API.Token -> API.Event -> ServerT (Post '[JSON] API.Event) App
 postProjectEvent projectName (Authenticated token) event = join . runDB $ DB.validateToken projectName token >>= \case
-  DB.Permitted -> pure . toAPIEvent <$> DB.createEvent projectName token event
+  DB.Permitted project -> pure . toAPIEvent project <$> DB.createEvent projectName token event
   DB.Forbidden -> pure (throwError err403)
 postProjectEvent _ _ _ = throwError err401
 
@@ -77,10 +77,11 @@ runDB ma = do
   liftIO (withPostgreSQL cfg ma)
 
 -- | Convert a 'DB.Event' to an 'API.Event'.
-toAPIEvent :: DB.Event -> API.Event
-toAPIEvent event = API.Event
+toAPIEvent :: DB.Project -> DB.Event -> API.Event
+toAPIEvent project event = API.Event
   { API.eventUUID        = Just (DB.eventUUID event)
   , API.eventTimestamp   = Just (DB.eventCreatedAt event)
+  , API.eventProject     = Just (toAPIProject project)
   , API.eventStatus      = DB.eventStatus event
   , API.eventDescription = DB.eventDescription event
   , API.eventTag         = DB.eventTag event
