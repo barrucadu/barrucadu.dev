@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base href="{{ base_uri|e }}">
+    <title>barrucadu.dev</title>
+    <link rel="stylesheet" href="static/style.css" type="text/css">
+    <link rel="alternate" href="atom.xml" type="application/atom+xml" title="barrucadu.dev events">
+    <link rel="canonical" href=" {{ base_uri|e }}">
+  </head>
+
+  <body>
+    <ol>
+      {% for event in events %}
+      <li class="cols">
+        <div class="col rows">
+          <div class="row">
+            <time datetime="{{ event.timestamp|e }}">{{ event.relative_timestamp|e }}</time>
+          </div>
+          <div class="row">
+            <a class="project" href="{{ event.project.url|e }}">{{ event.project.name|e }}</a>
+            {% if event.tag is defined %}
+            @
+            <span class="tag">
+              {% if event.tagUrl is defined %}<a href="{{ event.tagUrl|e }}">{% endif %}
+              {{ event.tag|e }}
+              {% if event.tagUrl is defined %}</a>{% endif %}
+            </span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col">
+          {{ event.status|e }}
+        </div>
+        <div class="col">
+          {{ event.description|e }}
+          {% if event.detailsUrl is defined %}<a class="details" href="{{ event.detailsUrl|e }}">(details)</a>{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+  </body>
+</html>
