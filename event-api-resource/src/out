@@ -15,6 +15,7 @@ token = script_input["source"]["token"]
 path = script_input["params"]["path"]
 status = script_input["params"]["status"]
 description = script_input["params"].get("description")
+phase = script_input["params"].get("phase")
 source_dir = sys.argv[1]
 
 link = None
@@ -27,6 +28,13 @@ if script_input["params"].get("show_link", True):
         "link",
         f"https://cd.barrucadu.dev/teams/{BUILD_TEAM_NAME}/pipelines/{BUILD_PIPELINE_NAME}/jobs/{BUILD_JOB_NAME}/builds/{BUILD_NAME}",
     )
+
+if phase is None:
+    try:
+        with open(f"{source_dir}/{path}/phase", "rb") as file:
+            phase = file.read().decode("utf-8")
+    except FileNotFoundError:
+        pass
 
 if description is None:
     try:
@@ -52,6 +60,8 @@ except FileNotFoundError:
 
 in_event = {"status": status, "description": description}
 
+if phase:
+    in_event["phase"] =phase
 if tag:
     in_event["tag"] = tag
 if tag_url:
