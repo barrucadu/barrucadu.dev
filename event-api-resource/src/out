@@ -12,7 +12,7 @@ script_input = json.loads(sys.stdin.read())
 uri = script_input["source"].get("uri", "https://event-api.barrucadu.dev")
 project = script_input["source"]["project"]
 token = script_input["source"]["token"]
-path = script_input["params"]["path"]
+path = script_input["params"].get("path")
 status = script_input["params"]["status"]
 description = script_input["params"].get("description")
 phase = script_input["params"].get("phase")
@@ -29,39 +29,40 @@ if script_input["params"].get("show_link", True):
         f"https://cd.barrucadu.dev/teams/{BUILD_TEAM_NAME}/pipelines/{BUILD_PIPELINE_NAME}/jobs/{BUILD_JOB_NAME}/builds/{BUILD_NAME}",
     )
 
-if phase is None:
+tag = None
+tag_url = None
+if path:
+    if phase is None:
+        try:
+            with open(f"{source_dir}/{path}/phase", "rb") as file:
+                phase = file.read().decode("utf-8")
+        except FileNotFoundError:
+            pass
+
+    if description is None:
+        try:
+            with open(f"{source_dir}/{path}/description", "rb") as file:
+                description = file.read().decode("utf-8")
+        except FileNotFoundError:
+            print("missing description.", file=sys.stderr)
+            sys.exit(1)
+
     try:
-        with open(f"{source_dir}/{path}/phase", "rb") as file:
-            phase = file.read().decode("utf-8")
+        with open(f"{source_dir}/{path}/tag", "rb") as file:
+            tag = file.read().decode("utf-8")
+        with open(f"{source_dir}/{path}/tag_url", "rb") as file:
+            tag_url = file.read().decode("utf-8")
     except FileNotFoundError:
         pass
-
-if description is None:
-    try:
-        with open(f"{source_dir}/{path}/description", "rb") as file:
-            description = file.read().decode("utf-8")
-    except FileNotFoundError:
-        print("missing description.", file=sys.stderr)
-        sys.exit(1)
 
 if status not in ["Ok", "Failure", "Error"]:
     print("params.status should be one of Ok, Failure, Error.", file=sys.stderr)
     sys.exit(1)
 
-tag = None
-tag_url = None
-try:
-    with open(f"{source_dir}/{path}/tag", "rb") as file:
-        tag = file.read().decode("utf-8")
-    with open(f"{source_dir}/{path}/tag_url", "rb") as file:
-        tag_url = file.read().decode("utf-8")
-except FileNotFoundError:
-    pass
-
 in_event = {"status": status, "description": description}
 
 if phase:
-    in_event["phase"] =phase
+    in_event["phase"] = phase
 if tag:
     in_event["tag"] = tag
 if tag_url:
