@@ -24,6 +24,7 @@ import           System.Exit               (exitFailure)
 
 import qualified API
 import qualified Database                  as DB
+import qualified Database.Migrations       as DBM
 import           Server                    (App (..), apiServer)
 import           Util
 
@@ -35,6 +36,7 @@ main = do
     ["run"] -> do
       secret <- getJWTSecret
       cmdRun conn secret
+    ["migrate"] -> cmdMigrate conn
     ["get-project", name] -> runDB (cmdGetProject (T.pack name))
     ["get-token", uuid] -> do
       secret <- getJWTSecret
@@ -59,6 +61,7 @@ main = do
     _ -> do
       putStrLn "usage:"
       putStrLn "    run                                 - start the server on port 3000"
+      putStrLn "    migrate                             - run DB migrations only"
       putStrLn "    get-project <name>                  - print a project's details by name"
       putStrLn "    get-token <uuid>                    - print a token's details by UUID"
       putStrLn "    get-event <uuid>                    - print an event's details by UUID"
@@ -75,6 +78,12 @@ cmdRun :: PGConnectInfo -> JWTSettings -> IO ()
 cmdRun conn secret = run 3000 $
   serveWithContext (Proxy @ API.Api) (defaultCookieSettings :. secret :. EmptyContext) $
   hoistServerWithContext (Proxy @ API.Api) (Proxy @ '[CookieSettings, JWTSettings]) (\ma -> runReaderT (runApp ma) conn) apiServer
+
+-- | Perform database migrations
+cmdMigrate :: PGConnectInfo -> IO ()
+cmdMigrate conn = DBM.runMigrations conn >>= \case
+  DBM.MigrationSuccess   -> pure ()
+  DBM.MigrationError err -> die err
 
 -- | Get a project by name.
 cmdGetProject :: Text -> SeldaM db ()
