@@ -84,6 +84,7 @@ toAPIEvent project event = API.Event
   , API.eventProject     = Just (toAPIProject project)
   , API.eventStatus      = DB.eventStatus event
   , API.eventDescription = DB.eventDescription event
+  , API.eventPhase       = DB.eventPhase event
   , API.eventTag         = DB.eventTag event
   , API.eventTagUrl      = DB.eventTagUrl event
   , API.eventDetailsUrl  = DB.eventDetailsUrl event

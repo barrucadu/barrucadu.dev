@@ -79,6 +79,7 @@ data Event = Event
   , eventProject     :: Maybe Project
   , eventStatus      :: Status
   , eventDescription :: Text
+  , eventPhase       :: Maybe Text
   , eventTag         :: Maybe Text
   , eventTagUrl      :: Maybe Text
   , eventDetailsUrl  :: Maybe Text

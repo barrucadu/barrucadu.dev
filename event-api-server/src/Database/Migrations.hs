@@ -1,10 +1,13 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Database.Migrations
   ( M.MigrationResult(..)
   , module Database.Migrations
   ) where
 
+import           Data.ByteString                      (ByteString)
+import           Data.Monoid                          ((<>))
 import           Database.PostgreSQL.Simple           (Connection,
                                                        connectPostgreSQL,
                                                        rollback,
@@ -28,4 +31,12 @@ runMigrations' conn = withTransaction conn $ M.runMigrations True conn migration
 migrations :: [M.MigrationCommand]
 migrations =
   [ M.MigrationInitialization
+  , M.MigrationScript "0001-add-phase-to-event" (addColumn "events" "eventPhase" "text")
   ]
+
+-------------------------------------------------------------------------------
+-- Migration helpers
+
+-- TODO: do not generate SQL by string interpolation!
+addColumn :: ByteString -> ByteString -> ByteString -> ByteString
+addColumn tbl col ty = "ALTER TABLE public." <> tbl <> " ADD COLUMN \"" <> col <> "\" " <> ty

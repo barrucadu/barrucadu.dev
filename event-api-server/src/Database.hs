@@ -71,6 +71,7 @@ data Event = Event
   , eventProject     :: Text
   , eventStatus      :: API.Status
   , eventDescription :: Text
+  , eventPhase       :: Maybe Text
   , eventTag         :: Maybe Text
   , eventTagUrl      :: Maybe Text
   , eventDetailsUrl  :: Maybe Text
@@ -141,6 +142,7 @@ createEvent' projectName_ token event now uuid = insert_ events [e] >> pure e wh
       , eventProject     = projectName_
       , eventStatus      = API.eventStatus event
       , eventDescription = API.eventDescription event
+      , eventPhase       = API.eventPhase event
       , eventTag         = API.eventTag event
       , eventTagUrl      = API.eventTagUrl event
       , eventDetailsUrl  = API.eventDetailsUrl event
