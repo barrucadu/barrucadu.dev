@@ -20,8 +20,8 @@ executable event-api-server
                      , servant-auth
                      , servant-auth-server
                      , servant-server
+                     , splitmix
                      , text
-                     , tf-random
                      , time
                      , uuid
                      , warp

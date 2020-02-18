@@ -1,13 +1,12 @@
 module Util where
 
-import           Control.Monad        (guard)
-import           Data.Char            (toLower)
-import           Data.List            (stripPrefix)
-import           Data.UUID            (UUID)
-import qualified Data.UUID            as UUID
-import           System.Random.TF     (newTFGen)
-import           System.Random.TF.Gen (RandomGen (next))
-import           Text.Read            (readMaybe)
+import           Control.Monad          (guard)
+import           Data.Char              (toLower)
+import           Data.List              (stripPrefix)
+import           Data.UUID              (UUID)
+import qualified Data.UUID              as UUID
+import qualified System.Random.SplitMix as R
+import           Text.Read              (readMaybe)
 
 -- | Drop the prefix, downcase the next letter
 fieldLabelModifier :: String -> String -> String
@@ -40,9 +39,7 @@ readBool str
 -- | Generate a random UUID.
 genUUID :: IO UUID
 genUUID = do
-  gen <- newTFGen
-  let (w0, gen')   = next gen
-  let (w1, gen'')  = next gen'
-  let (w2, gen''') = next gen''
-  let (w3, _)      = next gen'''
+  gen <- R.newSMGen
+  let (w0, w1, gen') = R.nextTwoWord32 gen
+  let (w2, w3, _)    = R.nextTwoWord32 gen'
   pure (UUID.fromWords w0 w1 w2 w3)
