@@ -13,7 +13,7 @@ project = script_input["source"]["project"]
 token = script_input["source"]["token"]
 path = script_input["params"]["path"]
 status = script_input["params"]["status"]
-description = script_input["params"]["description"]
+description = script_input["params"].get("description")
 source_dir = sys.argv[1]
 
 link = None
@@ -26,6 +26,14 @@ if script_input["params"].get("show_link", True):
         "link",
         f"https://cd.barrucadu.dev/teams/{BUILD_TEAM_NAME}/pipelines/{BUILD_PIPELINE_NAME}/jobs/{BUILD_JOB_NAME}/builds/{BUILD_NAME}",
     )
+
+if description is None:
+    try:
+        with open(f"{source_dir}/{path}/description", "rb") as file:
+            description = file.read().decode("utf-8")
+    except FileNotFoundError:
+        print("missing description.", file=sys.stderr)
+        sys.exit(1)
 
 if status not in ["Ok", "Failure", "Error"]:
     print("params.status should be one of Ok, Failure, Error.", file=sys.stderr)
