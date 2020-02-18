@@ -10,9 +10,13 @@ script_input = json.loads(sys.stdin.read())
 uri = script_input["source"].get("uri", "https://event-api.barrucadu.dev")
 project = script_input["source"]["project"]
 
+version = script_input.get("version")
+if version:
+    version = version.get("uuid")
+
 params = {}
-if "version" in script_input:
-    params = {"since": script_input["version"]["uuid"]}
+if version:
+    params = {"since": version}
 
 r = requests.get(f"{uri}/project/{urllib.parse.quote(project)}/events", params=params)
 r.raise_for_status()
@@ -21,7 +25,7 @@ events = r.json()
 
 out = []
 if len(events) > 0:
-    if "version" in script_input:
+    if version:
         out = [{"uuid": event["uuid"]} for event in reversed(events)]
     else:
         out = [{"uuid": events[0]["uuid"]}]
