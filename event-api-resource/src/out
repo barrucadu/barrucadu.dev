@@ -66,9 +66,9 @@ r = requests.post(
 r.raise_for_status()
 out_event = r.json()
 
-out = {
-    "version": {"uuid": out_event["uuid"]},
-    "metadata": [{"name": k, "value": v} for k, v in out_event.items()],
-}
+metadata = [{"name": k, "value": v} for k, v in out_event.items() if k != "project"]
+metadata.extend(
+    [{"name": f"project_{k}", "value": v} for k, v in out_event["project"].items()]
+)
 
-print(json.dumps(out))
+print(json.dumps({"version": {"uuid": out_event["uuid"]}, "metadata": metadata}))

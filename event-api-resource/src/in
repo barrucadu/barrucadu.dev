@@ -18,9 +18,9 @@ event = r.json()
 with open(f"{dest_dir}/event", "wb") as file:
     file.write(json.dumps(event).encode("utf-8"))
 
-out = {
-    "version": {"uuid": uuid},
-    "metadata": [{"name": k, "value": v} for k, v in event.items()],
-}
+metadata = [{"name": k, "value": v} for k, v in event.items() if k != "project"]
+metadata.extend(
+    [{"name": f"project_{k}", "value": v} for k, v in event["project"].items()]
+)
 
-print(json.dumps(out))
+print(json.dumps({"version": {"uuid": uuid}, "metadata": metadata}))
