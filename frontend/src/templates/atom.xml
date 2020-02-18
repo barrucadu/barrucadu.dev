@@ -20,7 +20,7 @@
     <updated>{{ event.timestamp|e }}</updated>
     <summary type="html">
       <![CDATA[
-{{ event.description }}
+{% if event.phase is defined %}{{ event.phase|e }}: {% endif %}{{ event.description }}
       ]]>
     </summary>
   </entry>

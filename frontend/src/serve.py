@@ -24,9 +24,16 @@ app = Flask(__name__)
 
 
 def fetch_events_from_api(count=150):
+    def clean_dict(d):
+        cleaned = {k: v for k, v in d.items() if v is not None}
+        for k, v in cleaned.items():
+            if isinstance(v, dict):
+                cleaned[k] = clean_dict(v)
+        return cleaned
+
     r = requests.get(f"{API_URI}/events", params={"count": count})
     r.raise_for_status()
-    return r.json()
+    return [clean_dict(event) for event in r.json()]
 
 
 def phony_events(count=150):
@@ -48,6 +55,8 @@ def phony_events(count=150):
             ),
             "description": FAKE.sentence(),
         }
+        if FAKE.boolean(chance_of_getting_true=75):
+            event["phase"] = FAKE.word()
         if FAKE.boolean(chance_of_getting_true=75):
             event["tag"] = FAKE.sha256()[:7]
             if FAKE.boolean(chance_of_getting_true=75):
@@ -85,6 +94,9 @@ def munge_event(now, event):
         event["relative_timestamp"] = then.strftime("%b %d")
 
     event["status_image"] = f"status-{event['status'].lower()}.png"
+
+    if "phase" in event:
+        event["phase"] = event["phase"].capitalize()
 
 @app.route("/")
 def index():

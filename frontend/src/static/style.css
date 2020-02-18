@@ -57,3 +57,8 @@ a:active, a:hover {
 .detail a {
     font-size: 18px;
 }
+
+.phase {
+    font-variant: small-caps;
+    font-weight: bold;
+}

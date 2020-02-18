@@ -28,6 +28,7 @@
       </div>
       <img class="status" src="static/{{ event.status_image|e }}" alt="Status: {{ event.status|e }}" title="Status: {{ event.status|e }}">
       <div class="detail">
+        {% if event.phase is defined %}<span class="phase">{{ event.phase|e }}</span>{% endif %}
         {{ event.description|e }}
         {% if event.detailsUrl is defined %}<a href="{{ event.detailsUrl|e }}">(details)</a>{% endif %}
       </div>
