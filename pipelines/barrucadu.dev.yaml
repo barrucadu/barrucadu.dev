@@ -1,0 +1,252 @@
+x-tags: &x-tags
+  platform: linux
+  image_resource:
+    type: docker-image
+    source:
+      repository: alpine
+  outputs:
+    - name: tags
+  run:
+    path: sh
+    args:
+      - -cxe
+      - |
+        apk add --no-cache git jq
+        mkdir -p tags/event
+        mkdir -p tags/image
+        cd in
+
+        tag_name () {
+          if [ -f docker_inspect.json ]; then
+            jq -r '.[0].Config.Labels["barrucadu.tag.name"]' < docker_inspect.json
+          else
+            git rev-parse --short HEAD
+          fi
+        }
+
+        tag_url () {
+          if [ -f docker_inspect.json ]; then
+            jq -r '.[0].Config.Labels["barrucadu.tag.url"]' < docker_inspect.json
+          else
+            echo "https://github.com/barrucadu/barrucadu.dev/commit/$(git rev-parse HEAD)"
+          fi
+        }
+
+        summary () {
+          if [ -f docker_inspect.json ]; then
+            jq -r '.[0].Config.Labels["barrucadu.summary"]' < docker_inspect.json
+          else
+            git show -s --format=%s HEAD
+          fi
+        }
+
+        tag_name > ../tags/event/tag
+        tag_url > ../tags/event/tag_url
+        if [ -z "$DESCRIPTION_PREFIX" ]; then
+          summary > ../tags/event/description
+        else
+          echo "${DESCRIPTION_PREFIX}: $(summary)" > ../tags/event/description
+        fi
+
+        jq -n --arg tag_name "$(tag_name)" --arg tag_url "$(tag_url)" --arg summary "$(summary)" > ../tags/image/labels \
+           '{ "barrucadu.tag.name": $tag_name, "barrucadu.tag.url": $tag_url, "barrucadu.summary": $summary}'
+
+x-deploy-systemd-service: &x-deploy-systemd-service
+  platform: linux
+  image_resource:
+    type: docker-image
+    source:
+      repository: alpine
+  run:
+    path: sh
+    args:
+      - -ce
+      - |
+        echo "$SSH_PRIVATE_KEY" > ssh-private-key
+        chmod 600 ssh-private-key
+        set -x
+        apk add --no-cache openssh
+        ssh -i ssh-private-key -o "StrictHostKeyChecking no" concourse-deploy-robot@barrucadu.dev sudo systemctl restart "$SERVICE"
+
+x-trigger-events: &x-trigger-events
+  on_success:
+    put: event-api
+    params:
+      path: tags/event
+      status: Ok
+  on_failure:
+    put: event-api
+    params:
+      path: tags/event
+      status: Failure
+  on_abort:
+    put: event-api
+    params:
+      path: tags/event
+      status: Error
+  on_error:
+    put: event-api
+    params:
+      path: tags/event
+      status: Error
+
+x-trigger-events-for-tag-task: &x-trigger-events-for-tag-task
+  on_failure:
+    put: event-api
+    params:
+      description: Tagging task error
+      status: Error
+  on_error:
+    put: event-api
+    params:
+      description: Tagging task error
+      status: Error
+
+resource_types:
+- name: event-api-resource
+  type: docker-image
+  source:
+    repository: registry.barrucadu.dev/event-api-resource
+    username: registry
+    password: {{docker-registry-password}}
+
+resources:
+- name: event-api-resource-git
+  type: git
+  source:
+    uri: https://github.com/barrucadu/barrucadu.dev.git
+    paths: ["event-api-resource/"]
+- name: event-api-server-git
+  type: git
+  source:
+    uri: https://github.com/barrucadu/barrucadu.dev.git
+    paths: ["event-api-server/"]
+- name: frontend-git
+  type: git
+  source:
+    uri: https://github.com/barrucadu/barrucadu.dev.git
+    paths: ["frontend/"]
+- name: event-api-resource-image
+  type: docker-image
+  source:
+    repository: registry.barrucadu.dev/event-api-resource
+    username: registry
+    password: {{docker-registry-password}}
+- name: event-api-server-image
+  type: docker-image
+  source:
+    repository: registry.barrucadu.dev/event-api-server
+    username: registry
+    password: {{docker-registry-password}}
+- name: frontend-image
+  type: docker-image
+  source:
+    repository: registry.barrucadu.dev/frontend
+    username: registry
+    password: {{docker-registry-password}}
+- name: event-api
+  type: event-api-resource
+  source:
+    project: barrucadu.dev
+    token: {{event-api-barrucadu-dev-token}}
+
+jobs:
+- name: build-event-api-resource
+  plan:
+    - get: event-api-resource-git
+      trigger: true
+    - task: Tag
+      <<: *x-trigger-events-for-tag-task
+      config:
+        <<: *x-tags
+        inputs:
+          - { name: event-api-resource-git, path: in }
+        params:
+          DESCRIPTION_PREFIX: "BUILD"
+    - put: event-api-resource-image
+      params:
+        build: event-api-resource-git/event-api-resource/
+        dockerfile: event-api-resource-git/event-api-resource/Dockerfile
+        labels_file: tags/image/labels
+        tag_as_latest: true
+      <<: *x-trigger-events
+- name: build-event-api-server
+  plan:
+    - get: event-api-server-git
+      trigger: true
+    - task: Tag
+      <<: *x-trigger-events-for-tag-task
+      config:
+        <<: *x-tags
+        inputs:
+          - { name: event-api-server-git, path: in }
+        params:
+          DESCRIPTION_PREFIX: "BUILD"
+    - put: event-api-server-image
+      params:
+        build: event-api-server-git/event-api-server/
+        dockerfile: event-api-server-git/event-api-server/Dockerfile
+        labels_file: tags/image/labels
+        tag_as_latest: true
+      <<: *x-trigger-events
+- name: deploy-event-api-server
+  serial: true
+  plan:
+    - get: event-api-server-image
+      trigger: true
+      passed: [build-event-api-server]
+    - task: Tag
+      <<: *x-trigger-events-for-tag-task
+      config:
+        <<: *x-tags
+        inputs:
+          - { name: event-api-server-image, path: in }
+        params:
+          DESCRIPTION_PREFIX: "DEPLOY"
+    - task: Deploy
+      config:
+        <<: *x-deploy-systemd-service
+        params:
+          SERVICE: event-api-server
+          SSH_PRIVATE_KEY: {{dreamlands-ssh-private-key}}
+      <<: *x-trigger-events
+- name: build-frontend
+  plan:
+    - get: frontend-git
+      trigger: true
+    - task: Tag
+      <<: *x-trigger-events-for-tag-task
+      config:
+        <<: *x-tags
+        inputs:
+          - { name: frontend-git, path: in }
+        params:
+          DESCRIPTION_PREFIX: "BUILD"
+    - put: frontend-image
+      params:
+        build: frontend-git/frontend/
+        dockerfile: frontend-git/frontend/Dockerfile
+        labels_file: tags/image/labels
+        tag_as_latest: true
+      <<: *x-trigger-events
+- name: deploy-frontend
+  serial: true
+  plan:
+    - get: frontend-image
+      trigger: true
+      passed: [build-frontend]
+    - task: Tag
+      <<: *x-trigger-events-for-tag-task
+      config:
+        <<: *x-tags
+        inputs:
+          - { name: frontend-image, path: in }
+        params:
+          DESCRIPTION_PREFIX: "DEPLOY"
+    - task: Deploy
+      config:
+        <<: *x-deploy-systemd-service
+        params:
+          SERVICE: frontend
+          SSH_PRIVATE_KEY: {{dreamlands-ssh-private-key}}
+      <<: *x-trigger-events
