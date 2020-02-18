@@ -34,8 +34,9 @@ main = do
   let runDB = withPostgreSQL conn
   getArgs >>= \case
     ["run"] -> do
-      secret <- getJWTSecret
-      cmdRun conn secret
+      cmdMigrate conn
+      cmdServe conn =<< getJWTSecret
+    ["serve"] -> cmdServe conn =<< getJWTSecret
     ["migrate"] -> cmdMigrate conn
     ["get-project", name] -> runDB (cmdGetProject (T.pack name))
     ["get-token", uuid] -> do
@@ -60,7 +61,8 @@ main = do
       Nothing    -> die "could not parse uuid"
     _ -> do
       putStrLn "usage:"
-      putStrLn "    run                                 - start the server on port 3000"
+      putStrLn "    run                                 - migrate and serve"
+      putStrLn "    serve                               - start the server on port 3000"
       putStrLn "    migrate                             - run DB migrations only"
       putStrLn "    get-project <name>                  - print a project's details by name"
       putStrLn "    get-token <uuid>                    - print a token's details by UUID"
@@ -74,8 +76,8 @@ main = do
       exitFailure
 
 -- | Start the server.
-cmdRun :: PGConnectInfo -> JWTSettings -> IO ()
-cmdRun conn secret = run 3000 $
+cmdServe :: PGConnectInfo -> JWTSettings -> IO ()
+cmdServe conn secret = run 3000 $
   serveWithContext (Proxy @ API.Api) (defaultCookieSettings :. secret :. EmptyContext) $
   hoistServerWithContext (Proxy @ API.Api) (Proxy @ '[CookieSettings, JWTSettings]) (\ma -> runReaderT (runApp ma) conn) apiServer
 
