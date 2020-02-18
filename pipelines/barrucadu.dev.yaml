@@ -133,6 +133,11 @@ resources:
   source:
     uri: https://github.com/barrucadu/barrucadu.dev.git
     paths: ["rsync-resource/"]
+- name: barrucadu.co.uk-builder-git
+  type: git
+  source:
+    uri: https://github.com/barrucadu/barrucadu.dev.git
+    paths: ["barrucadu.co.uk-builder/"]
 - name: event-api-resource-image
   type: docker-image
   source:
@@ -155,6 +160,12 @@ resources:
   type: docker-image
   source:
     repository: registry.barrucadu.dev/rsync-resource
+    username: registry
+    password: {{docker-registry-password}}
+- name: barrucadu.co.uk-builder-image
+  type: docker-image
+  source:
+    repository: registry.barrucadu.dev/barrucadu.co.uk-builder
     username: registry
     password: {{docker-registry-password}}
 - name: event-api
@@ -201,6 +212,26 @@ jobs:
       params:
         build: rsync-resource-git/rsync-resource/
         dockerfile: rsync-resource-git/rsync-resource/Dockerfile
+        labels_file: tags/image/labels
+        tag_as_latest: true
+      <<: *x-trigger-events
+- name: build-barrucadu.co.uk-builder
+  public: true
+  plan:
+    - get: barrucadu.co.uk-builder-git
+      trigger: true
+    - task: Tag
+      <<: *x-trigger-events-for-tag-task
+      config:
+        <<: *x-tags
+        inputs:
+          - { name: barrucadu.co.uk-builder-git, path: in }
+        params:
+          PHASE: build
+    - put: barrucadu.co.uk-builder-image
+      params:
+        build: barrucadu.co.uk-builder-git/barrucadu.co.uk-builder/
+        dockerfile: barrucadu.co.uk-builder-git/barrucadu.co.uk-builder/Dockerfile
         labels_file: tags/image/labels
         tag_as_latest: true
       <<: *x-trigger-events
