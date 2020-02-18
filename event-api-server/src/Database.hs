@@ -9,6 +9,7 @@ module Database where
 
 import           Control.Monad.IO.Class       (liftIO)
 import           Data.Maybe                   (listToMaybe)
+import qualified Data.Text                    as T
 import           Data.Time.Clock              (UTCTime, getCurrentTime)
 import           Data.UUID                    (UUID)
 import           Database.Selda               hiding (Result)
@@ -141,11 +142,11 @@ createEvent' projectName_ token event now uuid = insert_ events [e] >> pure e wh
       , eventToken       = API.tokenUUID token
       , eventProject     = projectName_
       , eventStatus      = API.eventStatus event
-      , eventDescription = API.eventDescription event
-      , eventPhase       = API.eventPhase event
-      , eventTag         = API.eventTag event
-      , eventTagUrl      = API.eventTagUrl event
-      , eventDetailsUrl  = API.eventDetailsUrl event
+      , eventDescription = T.strip  $  API.eventDescription event
+      , eventPhase       = T.strip <$> API.eventPhase event
+      , eventTag         = T.strip <$> API.eventTag event
+      , eventTagUrl      = T.strip <$> API.eventTagUrl event
+      , eventDetailsUrl  = T.strip <$> API.eventDetailsUrl event
       }
 
 -------------------------------------------------------------------------------
