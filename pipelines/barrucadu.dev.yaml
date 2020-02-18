@@ -42,10 +42,10 @@ x-tags: &x-tags
 
         tag_name > ../tags/event/tag
         tag_url > ../tags/event/tag_url
-        if [ -z "$DESCRIPTION_PREFIX" ]; then
-          summary > ../tags/event/description
-        else
-          echo "${DESCRIPTION_PREFIX}: $(summary)" > ../tags/event/description
+        summary > ../tags/event/description
+
+        if [ -n "$PHASE" ]; then
+          echo "$PHASE" > ../tags/event/phase
         fi
 
         jq -n --arg tag_name "$(tag_name)" --arg tag_url "$(tag_url)" --arg summary "$(summary)" > ../tags/image/labels \
@@ -94,12 +94,14 @@ x-trigger-events-for-tag-task: &x-trigger-events-for-tag-task
   on_failure:
     put: event-api
     params:
-      description: Tagging task error
+      phase: tag
+      description: Internal error, check build log.
       status: Error
   on_error:
     put: event-api
     params:
-      description: Tagging task error
+      phase: tag
+      description: Internal error, check build log.
       status: Error
 
 resource_types:
@@ -162,7 +164,7 @@ jobs:
         inputs:
           - { name: event-api-resource-git, path: in }
         params:
-          DESCRIPTION_PREFIX: "BUILD"
+          PHASE: build
     - put: event-api-resource-image
       params:
         build: event-api-resource-git/event-api-resource/
@@ -181,7 +183,7 @@ jobs:
         inputs:
           - { name: event-api-server-git, path: in }
         params:
-          DESCRIPTION_PREFIX: "BUILD"
+          PHASE: build
     - put: event-api-server-image
       params:
         build: event-api-server-git/event-api-server/
@@ -202,7 +204,7 @@ jobs:
         inputs:
           - { name: event-api-server-image, path: in }
         params:
-          DESCRIPTION_PREFIX: "DEPLOY"
+          PHASE: deploy
     - task: Deploy
       config:
         <<: *x-deploy-systemd-service
@@ -221,7 +223,7 @@ jobs:
         inputs:
           - { name: frontend-git, path: in }
         params:
-          DESCRIPTION_PREFIX: "BUILD"
+          PHASE: build
     - put: frontend-image
       params:
         build: frontend-git/frontend/
@@ -242,7 +244,7 @@ jobs:
         inputs:
           - { name: frontend-image, path: in }
         params:
-          DESCRIPTION_PREFIX: "DEPLOY"
+          PHASE: deploy
     - task: Deploy
       config:
         <<: *x-deploy-systemd-service
