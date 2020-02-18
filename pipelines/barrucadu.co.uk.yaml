@@ -62,11 +62,6 @@ x-bookdb-trigger-events: &x-bookdb-trigger-events
     params:
       path: tags/event
       status: Failure
-  on_abort:
-    put: bookdb-event-api
-    params:
-      path: tags/event
-      status: Error
   on_error:
     put: bookdb-event-api
     params:
@@ -243,11 +238,6 @@ jobs:
         params:
           path: tags/build-site
           status: Failure
-      on_abort:
-        put: www-event-api
-        params:
-          path: tags/build-site
-          status: Error
       on_error:
         put: www-event-api
         params:
@@ -285,11 +275,6 @@ jobs:
         params:
           path: tags/build-cv
           status: Failure
-      on_abort:
-        put: www-event-api
-        params:
-          path: tags/build-cv
-          status: Error
       on_error:
         put: www-event-api
         params:
@@ -305,11 +290,6 @@ jobs:
           path: tags/deploy
           status: Ok
       on_failure:
-        put: www-event-api
-        params:
-          path: tags/deploy
-          status: Error
-      on_abort:
         put: www-event-api
         params:
           path: tags/deploy
@@ -395,12 +375,6 @@ jobs:
           path: tags
           phase: build
           status: Failure
-      on_abort:
-        put: memo-event-api
-        params:
-          path: tags
-          phase: build
-          status: Error
       on_error:
         put: memo-event-api
         params:
@@ -418,12 +392,6 @@ jobs:
           phase: deploy
           status: Ok
       on_failure:
-        put: memo-event-api
-        params:
-          path: tags
-          phase: deploy
-          status: Error
-      on_abort:
         put: memo-event-api
         params:
           path: tags
@@ -462,12 +430,6 @@ jobs:
           phase: notify
           status: Ok
       on_failure:
-        put: memo-event-api
-        params:
-          path: tags
-          phase: notify
-          status: Error
-      on_abort:
         put: memo-event-api
         params:
           path: tags

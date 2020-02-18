@@ -79,11 +79,6 @@ x-trigger-events: &x-trigger-events
     params:
       path: tags/event
       status: Failure
-  on_abort:
-    put: event-api
-    params:
-      path: tags/event
-      status: Error
   on_error:
     put: event-api
     params:
