@@ -4,6 +4,7 @@ import json
 import os
 import requests
 import sys
+import time
 import urllib.parse
 
 script_input = json.loads(sys.stdin.read())
@@ -58,13 +59,26 @@ if tag_url:
 if link:
     in_event["detailsUrl"] = link
 
-r = requests.post(
-    f"{uri}/project/{urllib.parse.quote(project)}/event",
-    headers={"Authorization": f"Bearer {token}"},
-    json=in_event,
-)
-r.raise_for_status()
-out_event = r.json()
+attempts = 0
+exc = Exception("Something went wrong")
+out_event = None
+while out_event is None and attempts < 5:
+    try:
+        r = requests.post(
+            f"{uri}/project/{urllib.parse.quote(project)}/event",
+            headers={"Authorization": f"Bearer {token}"},
+            json=in_event,
+        )
+        r.raise_for_status()
+        out_event = r.json()
+    except requests.exceptions.HTTPError as e:
+        print(f"got {e}, retrying [{attempts}/5]", file=sys.stderr)
+        exc = e
+        attempts += 1
+        time.sleep(5)
+
+if out_event is None:
+    raise exc
 
 metadata = [{"name": k, "value": v} for k, v in out_event.items() if k != "project"]
 metadata.extend(
