@@ -154,6 +154,7 @@ resources:
 
 jobs:
 - name: build-event-api-resource
+  public: true
   plan:
     - get: event-api-resource-git
       trigger: true
@@ -173,6 +174,7 @@ jobs:
         tag_as_latest: true
       <<: *x-trigger-events
 - name: build-event-api-server
+  public: true
   plan:
     - get: event-api-server-git
       trigger: true
@@ -192,6 +194,7 @@ jobs:
         tag_as_latest: true
       <<: *x-trigger-events
 - name: deploy-event-api-server
+  public: true
   serial: true
   plan:
     - get: event-api-server-image
@@ -213,6 +216,7 @@ jobs:
           SSH_PRIVATE_KEY: {{dreamlands-ssh-private-key}}
       <<: *x-trigger-events
 - name: build-frontend
+  public: true
   plan:
     - get: frontend-git
       trigger: true
@@ -232,6 +236,7 @@ jobs:
         tag_as_latest: true
       <<: *x-trigger-events
 - name: deploy-frontend
+  public: true
   serial: true
   plan:
     - get: frontend-image
