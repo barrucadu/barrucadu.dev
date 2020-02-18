@@ -44,7 +44,7 @@ def phony_events(count=150):
                 start_date="-13d", end_date="now"
             ).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
             "status": random.choice(
-                ["Ok", "Ok", "Ok", "Ok", "Failed", "Failed", "Error"]
+                ["Ok", "Ok", "Ok", "Ok", "Failure", "Failure", "Error"]
             ),
             "description": FAKE.sentence(),
         }
