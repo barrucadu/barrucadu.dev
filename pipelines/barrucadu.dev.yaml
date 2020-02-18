@@ -128,6 +128,11 @@ resources:
   source:
     uri: https://github.com/barrucadu/barrucadu.dev.git
     paths: ["frontend/"]
+- name: rsync-resource-git
+  type: git
+  source:
+    uri: https://github.com/barrucadu/barrucadu.dev.git
+    paths: ["rsync-resource/"]
 - name: event-api-resource-image
   type: docker-image
   source:
@@ -144,6 +149,12 @@ resources:
   type: docker-image
   source:
     repository: registry.barrucadu.dev/frontend
+    username: registry
+    password: {{docker-registry-password}}
+- name: rsync-resource-image
+  type: docker-image
+  source:
+    repository: registry.barrucadu.dev/rsync-resource
     username: registry
     password: {{docker-registry-password}}
 - name: event-api
@@ -170,6 +181,26 @@ jobs:
       params:
         build: event-api-resource-git/event-api-resource/
         dockerfile: event-api-resource-git/event-api-resource/Dockerfile
+        labels_file: tags/image/labels
+        tag_as_latest: true
+      <<: *x-trigger-events
+- name: build-rsync-resource
+  public: true
+  plan:
+    - get: rsync-resource-git
+      trigger: true
+    - task: Tag
+      <<: *x-trigger-events-for-tag-task
+      config:
+        <<: *x-tags
+        inputs:
+          - { name: rsync-resource-git, path: in }
+        params:
+          PHASE: build
+    - put: rsync-resource-image
+      params:
+        build: rsync-resource-git/rsync-resource/
+        dockerfile: rsync-resource-git/rsync-resource/Dockerfile
         labels_file: tags/image/labels
         tag_as_latest: true
       <<: *x-trigger-events

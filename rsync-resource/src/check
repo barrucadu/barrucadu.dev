@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+
+import subprocess
+import os
+import sys
+import json
+
+script_input = json.loads(sys.stdin.read())
+server = script_input["source"]["server"]
+user = script_input["source"].get("user", "concourse-deploy-robot")
+remote_dir = script_input["source"]["remote_dir"]
+private_key = script_input["source"]["private_key"]
+port = script_input["source"].get("port", 22)
+
+subprocess.check_call("mkdir -vp ~/.ssh", shell=True, stdout=sys.stderr)
+subprocess.check_call("chmod 600 ~/.ssh", shell=True, stdout=sys.stderr)
+
+home = os.path.expanduser("~")
+server_key_file = os.path.join(home, ".ssh/server_key")
+
+with open(server_key_file, "w") as f:
+    f.write(private_key)
+
+with open(os.path.join(home, ".ssh/config"), "w") as f:
+    f.write("Host {}\n\tStrictHostKeyChecking no\n".format(server))
+
+subprocess.check_call("chmod 600 ~/.ssh/*", shell=True, stdout=sys.stderr)
+
+resource_version = subprocess.check_output(
+    [
+        "ssh",
+        "-i",
+        server_key_file,
+        "-p",
+        str(port),
+        "{}@{}".format(user, server),
+        "find {} -exec stat -c %Y {{}} \\; | sort -nr | head -n1".format(remote_dir),
+    ],
+    env={
+        "PATH": os.environ["PATH"],
+        "SSH_ASKPASS": "/opt/resource/askpass",
+        "DISPLAY": "",
+    },
+).rstrip()
+
+result = [{"mtime": resource_version.decode("utf8")}]
+sys.stdout.write(json.dumps(result))
