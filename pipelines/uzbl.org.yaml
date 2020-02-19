@@ -1,0 +1,166 @@
+resource_types:
+- name: event-api-resource
+  type: docker-image
+  source:
+    repository: registry.barrucadu.dev/event-api-resource
+    username: registry
+    password: {{docker-registry-password}}
+- name: rsync-resource
+  type: docker-image
+  source:
+    repository: registry.barrucadu.dev/rsync-resource
+    username: registry
+    password: {{docker-registry-password}}
+
+resources:
+- name: website-git
+  type: git
+  source:
+    uri: https://github.com/uzbl/uzbl-website.git
+- name: docs-git
+  type: git
+  source:
+    uri: https://github.com/uzbl/uzbl.git
+- name: website-rsync
+  type: rsync-resource
+  source:
+    server: barrucadu.co.uk
+    remote_dir: /srv/http/uzbl.org/www
+    private_key: {{dunwich-ssh-private-key}}
+- name: docs-rsync
+  type: rsync-resource
+  source:
+    server: barrucadu.co.uk
+    remote_dir: /srv/http/uzbl.org/uzbl
+    private_key: {{dunwich-ssh-private-key}}
+- name: event-api
+  type: event-api-resource
+  source:
+    project: uzbl.org
+    token: {{event-api-uzbl-org-token}}
+
+jobs:
+- name: deploy-website
+  public: true
+  serial: true
+  plan:
+    - get: website-git
+      trigger: true
+    - task: Tag
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source:
+            repository: alpine
+        inputs:
+          - name: website-git
+        outputs:
+          - name: tags
+        run:
+          path: sh
+          args:
+            - -cxe
+            - |
+              apk add --no-cache git
+
+              cd website-git
+              echo "website:$(git rev-parse --short HEAD)" > ../tags/tag
+              echo "https://github.com/uzbl/uzbl-website/commit/$(git rev-parse HEAD)" > ../tags/tag_url
+              git show -s --format=%s HEAD > ../tags/description
+      on_failure:
+        put: event-api
+        params:
+          phase: tag
+          description: Internal error, check build log.
+          status: Error
+      on_error:
+        put: event-api
+        params:
+          phase: tag
+          description: Internal error, check build log.
+          status: Error
+    - put: website-rsync
+      params:
+        path: website-git
+        rsync_args: ["--delete", "--exclude=.git/"]
+      on_success:
+        put: event-api
+        params:
+          path: tags
+          phase: deploy
+          status: Ok
+      on_failure:
+        put: event-api
+        params:
+          path: tags
+          phase: deploy
+          status: Error
+      on_error:
+        put: event-api
+        params:
+          path: tags
+          phase: deploy
+          status: Error
+- name: deploy-docs
+  public: true
+  serial: true
+  plan:
+    - get: docs-git
+      trigger: true
+    - task: Tag
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source:
+            repository: alpine
+        inputs:
+          - name: docs-git
+        outputs:
+          - name: tags
+        run:
+          path: sh
+          args:
+            - -cxe
+            - |
+              apk add --no-cache git
+
+              cd docs-git
+              echo "docs:$(git rev-parse --short HEAD)" > ../tags/tag
+              echo "https://github.com/uzbl/uzbl/commit/$(git rev-parse HEAD)" > ../tags/tag_url
+              git show -s --format=%s HEAD > ../tags/description
+      on_failure:
+        put: event-api
+        params:
+          phase: tag
+          description: Internal error, check build log.
+          status: Error
+      on_error:
+        put: event-api
+        params:
+          phase: tag
+          description: Internal error, check build log.
+          status: Error
+    - put: docs-rsync
+      params:
+        path: docs-git
+        rsync_args: ["--delete", "--exclude=.git/"]
+      on_success:
+        put: event-api
+        params:
+          path: tags
+          phase: deploy
+          status: Ok
+      on_failure:
+        put: event-api
+        params:
+          path: tags
+          phase: deploy
+          status: Error
+      on_error:
+        put: event-api
+        params:
+          path: tags
+          phase: deploy
+          status: Error
