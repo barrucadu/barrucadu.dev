@@ -1,0 +1,116 @@
+resource_types:
+- name: event-api-resource
+  type: docker-image
+  source:
+    repository: registry.barrucadu.dev/event-api-resource
+    username: registry
+    password: {{docker-registry-password}}
+- name: feed-resource
+  type: docker-image
+  source:
+    repository: registry.barrucadu.dev/feed-resource
+    username: registry
+    password: {{docker-registry-password}}
+
+resources:
+- name: event-api
+  type: event-api-resource
+  source:
+    project: dejafu
+    token: {{event-api-dejafu-token}}
+- name: dejafu-git
+  type: git
+  source:
+    uri: https://github.com/barrucadu/dejafu.git
+    paths: ["dejafu/", "dejafu-tests/"]
+- name: stackage-feed
+  type: feed-resource
+  source:
+    uri: https://www.stackage.org/feed
+
+jobs:
+- name: test-snapshot
+  public: true
+  plan:
+    - get: dejafu-git
+      trigger: true
+    - get: stackage-feed
+      trigger: true
+    - task: Tag
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source:
+            repository: alpine
+        inputs:
+          - name: dejafu-git
+          - name: stackage-feed
+        outputs:
+          - name: tags
+        run:
+          path: sh
+          args:
+            - -cxe
+            - |
+              apk add --no-cache git jq
+
+              cd dejafu-git
+              git rev-parse --short HEAD > ../tags/tag
+              echo "https://github.com/barrucadu/dejafu/commit/$(git rev-parse HEAD)" > ../tags/tag_url
+
+              jq -r .id < ../stackage-feed/item | cut -d/ -f4 > ../tags/resolver
+              echo "Automatic build against new resolver $(cat ../tags/resolver)" > ../tags/description
+      on_failure:
+        put: event-api
+        params:
+          phase: tag
+          description: Internal error, check build log.
+          status: Error
+      on_error:
+        put: event-api
+        params:
+          phase: tag
+          description: Internal error, check build log.
+          status: Error
+    - task: Build & Test
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source:
+            repository: haskell
+        inputs:
+          - name: dejafu-git
+          - name: tags
+        run:
+          path: sh
+          dir: dejafu-git
+          args:
+            - -cxe
+            - |
+              resolver=$(cat ../tags/resolver)
+              stack="stack --no-terminal"
+
+              $stack init --resolver=$resolver --force
+              $stack setup
+              $stack build dejafu-tests
+              $stack exec dejafu-tests
+      on_success:
+        put: event-api
+        params:
+          path: tags
+          phase: test
+          status: Ok
+      on_failure:
+        put: event-api
+        params:
+          path: tags
+          phase: test
+          status: Failure
+      on_error:
+        put: event-api
+        params:
+          path: tags
+          phase: test
+          status: Error
