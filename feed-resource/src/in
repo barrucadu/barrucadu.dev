@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+
+from datetime import datetime
+from time import mktime
+
+import feedparser
+import json
+import sys
+
+TIME_FMT = "%Y-%m-%dT%H:%M:%S"
+
+script_input = json.loads(sys.stdin.read())
+
+uri = script_input["source"]["uri"]
+version_raw = script_input["version"]["date"]
+version = datetime.strptime(version_raw, TIME_FMT)
+dest_dir = sys.argv[1]
+
+feed = feedparser.parse(uri)
+data = None
+for entry in feed["entries"]:
+    if datetime.fromtimestamp(mktime(entry["updated_parsed"])) == version:
+        with open(f"{dest_dir}/item", "wb") as file:
+            data = {k: v for k, v in entry.items() if isinstance(v, str)}
+            file.write(json.dumps(data).encode("utf-8"))
+        break
+
+if data is None:
+    print(f"Couldn't find entry for {version_raw}", file=sys.stderr)
+    sys.exit(1)
+
+print(
+    json.dumps(
+        {
+            "version": {"date": version_raw},
+            "metadata": [{"name": k, "value": v} for k, v in data.items() if k != "summary"],
+        }
+    )
+)

@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+
+from datetime import datetime
+from time import mktime
+
+import feedparser
+import json
+import sys
+
+TIME_FMT = "%Y-%m-%dT%H:%M:%S"
+
+script_input = json.loads(sys.stdin.read())
+
+uri = script_input["source"]["uri"]
+
+version = (script_input.get("version") or {}).get("date")
+if version:
+    version = datetime.strptime(version, TIME_FMT)
+
+feed = feedparser.parse(uri)
+dates = sorted(
+    set(
+        datetime.fromtimestamp(mktime(entry["updated_parsed"]))
+        for entry in feed["entries"]
+    )
+)
+if version:
+    dates = filter(lambda dt: dt >= version, dates)
+dates = list(dates)
+
+out = []
+if len(dates) > 0:
+    if version:
+        out = [{"date": datetime.strftime(d, TIME_FMT)} for d in dates]
+    else:
+        out = [{"date": datetime.strftime(dates[-1], TIME_FMT)}]
+
+print(json.dumps(out))
