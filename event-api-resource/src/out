@@ -59,6 +59,10 @@ if status not in ["Ok", "Failure", "Error"]:
     print("params.status should be one of Ok, Failure, Error.", file=sys.stderr)
     sys.exit(1)
 
+if not description:
+    print("params.description must be nonempty.", file=sys.stderr)
+    sys.exit(1)
+
 in_event = {"status": status, "description": description}
 
 if phase:
