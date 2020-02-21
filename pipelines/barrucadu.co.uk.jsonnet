@@ -73,19 +73,11 @@ local build_deploy_memo_job =
     { get: 'memo-git', trigger: true, },
     {
       task: 'Tag',
-      config: {
-        platform: 'linux',
-        image_resource: {
-          type: 'docker-image',
-          source: { repository: 'alpine', },
-        },
+      config: library['tag-builder_config'] + {
         inputs: [{ name: 'memo-git', }],
-        outputs: [{ name: 'tags', }],
         run: {
           path: 'sh',
           args: ['-cxe', |||
-            apk add --no-cache git
-            #
             cd memo-git
             git rev-parse --short HEAD > ../tags/tag
             echo "https://github.com/barrucadu/memo.barrucadu.co.uk/commit/$(git rev-parse HEAD)" > ../tags/tag_url
@@ -144,21 +136,14 @@ local build_deploy_www_job =
     { get: 'www-git', trigger: true, },
     {
       task: 'Tag',
-      config: {
-        platform: 'linux',
-        image_resource: {
-          type: 'docker-image',
-          source: { repository: 'alpine', },
-        },
+      config: library['tag-builder_config'] + {
         inputs: [
           { name: 'cv-git', },
           { name: 'www-git', },
         ],
-        outputs: [{ name: 'tags', }],
         run: {
           path: 'sh',
           args: ['-cxe', |||
-            apk add --no-cache git
             mkdir -p tags/build-cv
             mkdir -p tags/build-site
             mkdir -p tags/deploy

@@ -24,6 +24,10 @@ local library = import '_library.libsonnet';
       paths=['barrucadu.co.uk-builder/'],
     ),
     library['image_resource']('barrucadu.co.uk-builder'),
+    library['git_resource']('tag-builder', 'https://github.com/barrucadu/barrucadu.dev.git',
+      paths=['tag-builder/'],
+    ),
+    library['image_resource']('tag-builder'),
     # servers
     library['git_resource']('event-api-server', 'https://github.com/barrucadu/barrucadu.dev.git',
       paths=['event-api-server/'],
@@ -52,6 +56,10 @@ local library = import '_library.libsonnet';
     library['build_push_docker_job']('barrucadu.co.uk-builder', 'barrucadu.dev',
       event_resource_name='barrucadu.dev',
       docker_path='barrucadu.co.uk-builder',
+    ),
+    library['build_push_docker_job']('tag-builder', 'barrucadu.dev',
+      event_resource_name='barrucadu.dev',
+      docker_path='tag-builder',
     ),
     # servers
     library['build_push_docker_job']('event-api-server', 'barrucadu.dev',

@@ -11,14 +11,8 @@ local bad_event = {
 };
 {
   task: 'Tag',
-  config: {
-    platform: 'linux',
-    image_resource: {
-      type: 'docker-image',
-      source: { repository: 'alpine', },
-    },
+  config: library['tag-builder_config'] + {
     inputs: [ { name: name + '-git', } ],
-    outputs: [ { name: 'tags', } ],
     params: {
       NAME: name,
       REPO: repo,
@@ -26,8 +20,6 @@ local bad_event = {
     run: {
       path: 'sh',
       args: ['-cxe', |||
-        apk add --no-cache git
-        #
         cd "${NAME}-git"
         echo "${NAME}:$(git rev-parse --short HEAD)" > ../tags/tag
         echo "https://github.com/uzbl/${REPO}/commit/$(git rev-parse HEAD)" > ../tags/tag_url

@@ -17,6 +17,22 @@ local event(event_resource_name, status, phase) =
   },
 };
 
+local tag_builder_config =
+{
+  platform: 'linux',
+  image_resource: {
+    type: 'docker-image',
+    source: {
+      repository: 'registry.barrucadu.dev/tag-builder',
+      username: 'registry',
+      password: '{{docker-registry-password}}',
+    },
+  },
+  outputs: [
+    { name: 'tags' }
+  ],
+};
+
 {
   'resource_type': function(name)
   {
@@ -96,6 +112,8 @@ local event(event_resource_name, status, phase) =
       },
     },
 
+  'tag-builder_config': tag_builder_config,
+
   # jobs
   'build_push_docker_job': function(name, repo, event_resource_name=null, docker_path=null)
   local ern = if event_resource_name == null then name else event_resource_name;
@@ -107,21 +125,14 @@ local event(event_resource_name, status, phase) =
       { get: name + '-git', trigger: true, },
       {
         task: 'Tag',
-        config: {
-          platform: 'linux',
-          image_resource: {
-            type: 'docker-image',
-            source: { repository: 'alpine' },
-          },
+        config: tag_builder_config + {
           inputs: [ { name: name + '-git', path: 'in' } ],
-          outputs: [ { name: 'tags' } ],
           params: {
             REPO: repo,
           },
           run: {
             path: 'sh',
             args: ['-cxe', |||
-              apk add --no-cache git jq
               mkdir -p tags/event
               mkdir -p tags/image
               cd in

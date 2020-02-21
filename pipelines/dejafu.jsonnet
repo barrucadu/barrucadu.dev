@@ -17,22 +17,14 @@ local test_snapshot_job =
     };
     {
       task: 'Tag',
-      config: {
-        platform: 'linux',
-        image_resource: {
-          type: 'docker-image',
-          source: { repository: 'alpine', },
-        },
+      config: library['tag-builder_config'] + {
         inputs: [
           { name: 'dejafu-git', },
           { name: 'stackage-feed', },
         ],
-        outputs: [ { name: 'tags', }, ],
         run: {
           path: 'sh',
           args: ['-cxe', |||
-            apk add --no-cache git jq
-            #
             cd dejafu-git
             git rev-parse --short HEAD > ../tags/tag
             echo "https://github.com/barrucadu/dejafu/commit/$(git rev-parse HEAD)" > ../tags/tag_url
