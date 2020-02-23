@@ -137,9 +137,13 @@ local tag_builder_config =
               mkdir -p tags/image
               cd in
               #
-              git rev-parse --short HEAD > ../tags/event/tag
-              echo "https://github.com/barrucadu/${REPO}/commit/$(git rev-parse HEAD)" > ../tags/event/tag_url
-              git show -s --format=%s HEAD > ../tags/event/description
+              tag_name="$(git rev-parse --short HEAD)"
+              tag_url="https://github.com/barrucadu/${REPO}/commit/$(git rev-parse HEAD)"
+              summary="$(git show -s --format=%s HEAD)"
+              #
+              echo $tag_name > ../tags/event/tag
+              echo $tag_url > ../tags/event/tag_url
+              echo $summary > ../tags/event/description
               #
               jq -n --arg tag_name "$(tag_name)" --arg tag_url "$(tag_url)" --arg summary "$(summary)" > ../tags/image/labels \
                  '{ "barrucadu.tag.name": $tag_name, "barrucadu.tag.url": $tag_url, "barrucadu.summary": $summary}'
