@@ -10,6 +10,10 @@
   </head>
 
   <body>
+    {% if not events %}
+    <h1>No events.</h1>
+    <p>Did you mistype the project name?</p>
+    {% else %}
     <div class="events">
       {% for event in events %}
       <div class="metadata">
@@ -34,5 +38,6 @@
       </div>
       {% endfor %}
     </div>
+    {% endif %}
   </body>
 </html>

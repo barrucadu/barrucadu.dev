@@ -9,6 +9,7 @@ import faker.providers
 import os
 import random
 import requests
+import urllib.parse
 
 API_URI = os.getenv("API_URI", "https://event-api.barrucadu.dev")
 BASE_URI = os.getenv("BASE_URI", "https://www.barrucadu.dev")
@@ -23,7 +24,7 @@ FAKE.add_provider(faker.providers.python)
 app = Flask(__name__)
 
 
-def fetch_events_from_api(count=150):
+def fetch_events_from_api(count=150, project=None):
     def clean_dict(d):
         cleaned = {k: v for k, v in d.items() if v is not None}
         for k, v in cleaned.items():
@@ -31,12 +32,20 @@ def fetch_events_from_api(count=150):
                 cleaned[k] = clean_dict(v)
         return cleaned
 
-    r = requests.get(f"{API_URI}/events", params={"count": count})
+    if project is None:
+        r = requests.get(f"{API_URI}/events", params={"count": count})
+    else:
+        r = requests.get(
+            f"{API_URI}/project/{urllib.parse.quote(project)}/events",
+            params={"count": count},
+        )
+        if r.status_code == 404:
+            return []
     r.raise_for_status()
     return [clean_dict(event) for event in r.json()]
 
 
-def phony_events(count=150):
+def phony_events(count=150, project=None):
     def phony_project():
         return {
             "name": "-".join(FAKE.words(nb=random.randint(1, 3), unique=True)),
@@ -65,7 +74,11 @@ def phony_events(count=150):
             event["detailsUrl"] = FAKE.image_url()
         return event
 
-    projects = [phony_project() for i in range(random.randint(1, 10))]
+    if project is None:
+        projects = [phony_project() for i in range(random.randint(1, 10))]
+    else:
+        projects = [{"name": project, "url": FAKE.image_url()}]
+
     return sorted(
         [phony_event(projects) for i in range(0, count)],
         key=lambda event: event["timestamp"],
@@ -98,33 +111,41 @@ def munge_event(now, event):
     if "phase" in event:
         event["phase"] = event["phase"].capitalize()
 
-@app.route("/")
-def index():
-    if "phony" in request.args:
-        events = phony_events()
+
+def get_events(request_args):
+    project = request_args.get("project")
+
+    if "phony" in request_args:
+        events = phony_events(project=project)
     else:
-        events = fetch_events_from_api()
+        events = fetch_events_from_api(project=project)
 
     now = datetime.now()
     for event in events:
         munge_event(now, event)
+
+    return events
+
+
+@app.route("/")
+def index():
+    events = get_events(request.args)
 
     return render_template("index.html", base_uri=BASE_URI, events=events)
 
 
 @app.route("/atom.xml")
 def feed():
-    if "phony" in request.args:
-        events = phony_events()
-    else:
-        events = fetch_events_from_api()
+    events = get_events(request.args)
 
     feed_date = None
     if len(events) > 0:
         feed_date = events[0]["timestamp"]
 
     return Response(
-        render_template("atom.xml", base_uri=BASE_URI, events=events, feed_date=feed_date),
+        render_template(
+            "atom.xml", base_uri=BASE_URI, events=events, feed_date=feed_date
+        ),
         content_type="application/atom+xml",
     )
 
