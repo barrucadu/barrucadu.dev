@@ -64,13 +64,18 @@ local test_snapshot_job =
           args: ['-cxe', |||
             resolver=$(cat ../tags/resolver)
             stack="stack --no-terminal"
-            #
+
             # don't build all the dejafu-bench dependencies to speed up compilation
             # stack's docs suggest this should work: `stack build dejafu-tests:dejafu-tests`
             # but it doesn't, it still builds dejafu-bench too
             sed -n '/executable dejafu-bench/q;p' dejafu-tests/dejafu-tests.cabal > dejafu-tests.cabal
             mv dejafu-tests.cabal dejafu-tests/dejafu-tests.cabal
-            #
+
+            # use a utf-8 locale so hedgehog failure output doesn't
+            # cause an encoding error - this was the default in the
+            # haskell:8.8.1 image but not after that.
+            export LANG=C.UTF-8
+
             $stack init --resolver=$resolver --force
             $stack setup
             $stack build dejafu-tests
