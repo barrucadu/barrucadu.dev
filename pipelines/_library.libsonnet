@@ -17,17 +17,20 @@ local event(event_resource_name, status, phase) =
   },
 };
 
-local tag_builder_config =
+local builder_config(name) =
 {
   platform: 'linux',
   image_resource: {
     type: 'docker-image',
     source: {
-      repository: 'registry.barrucadu.dev/tag-builder',
+      repository: 'registry.barrucadu.dev/' + name + '-builder',
       username: 'registry',
       password: '{{docker-registry-password}}',
     },
   },
+};
+
+local tag_builder_config = builder_config('tag') + {
   outputs: [
     { name: 'tags' }
   ],
@@ -99,18 +102,9 @@ local tag_builder_config =
   },
 
   # task configs
-  'barrucadu.co.uk-builder_config':
-    {
-      platform: 'linux',
-      image_resource: {
-        type: 'docker-image',
-        source: {
-          repository: 'registry.barrucadu.dev/barrucadu.co.uk-builder',
-          username: 'registry',
-          password: '{{docker-registry-password}}',
-        },
-      },
-    },
+  'barrucadu.co.uk-builder_config': builder_config('barrucadu.co.uk'),
+
+  'lainon.life-builder_config': builder_config('lainon.life'),
 
   'tag-builder_config': tag_builder_config,
 
