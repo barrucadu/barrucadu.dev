@@ -141,7 +141,7 @@ local tag_builder_config = builder_config('tag') + {
                   echo $tag_url > ../tags/event/tag_url
                   echo $summary > ../tags/event/description
                   #
-                  jq -n --arg tag_name "$(tag_name)" --arg tag_url "$(tag_url)" --arg summary "$(summary)" > ../tags/image/labels \
+                  jq -n --arg tag_name "$tag_name" --arg tag_url "$tag_url" --arg summary "$summary" > ../tags/image/labels \
                      '{ "barrucadu.tag.name": $tag_name, "barrucadu.tag.url": $tag_url, "barrucadu.summary": $summary}'
                 |||,
               ],
@@ -192,6 +192,7 @@ local tag_builder_config = builder_config('tag') + {
                   mkdir -p tags/event
                   cd in
                   #
+                  cat docker_inspect.json
                   jq -r '.[0].Config.Labels["barrucadu.tag.name"]' < docker_inspect.json > ../tags/event/tag
                   jq -r '.[0].Config.Labels["barrucadu.tag.url"]' < docker_inspect.json > ../tags/event/tag_url
                   jq -r '.[0].Config.Labels["barrucadu.summary"]' < docker_inspect.json > ../tags/event/description
