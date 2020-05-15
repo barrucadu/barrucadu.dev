@@ -18,16 +18,59 @@ local event(phase, status) = {
   },
 };
 
+local build_test_dejafu_task = {
+  task: 'Build & Test',
+  config: {
+    platform: 'linux',
+    image_resource: {
+      type: 'docker-image',
+      source: { repository: 'haskell' },
+    },
+    inputs: [
+      { name: 'dejafu-git' },
+      { name: 'tags' },
+    ],
+    run: {
+      path: 'sh',
+      dir: 'dejafu-git',
+      args: [
+        '-cxe',
+        |||
+          stack="stack --no-terminal"
+
+          # don't build all the dejafu-bench dependencies to speed up compilation
+          # stack's docs suggest this should work: `stack build dejafu-tests:dejafu-tests`
+          # but it doesn't, it still builds dejafu-bench too
+          sed -n '/executable dejafu-bench/q;p' dejafu-tests/dejafu-tests.cabal > dejafu-tests.cabal
+          mv dejafu-tests.cabal dejafu-tests/dejafu-tests.cabal
+
+          # use a utf-8 locale so hedgehog failure output doesn't
+          # cause an encoding error - this was the default in the
+          # haskell:8.8.1 image but not after that.
+          export LANG=C.UTF-8
+
+          if [ -f ../tags/resolver ]; then
+            resolver="$(cat ../tags/resolver)"
+            $stack init --resolver="$resolver" --force
+          fi
+          $stack setup
+          $stack build
+          $stack exec dejafu-tests
+        |||,
+      ],
+    },
+  },
+  on_success: event('test', 'Ok'),
+  on_failure: event('test', 'Failure'),
+  on_error: event('test', 'Error'),
+};
+
 local test_snapshot_job =
   {
     name: 'test-snapshot',
     public: true,
     plan: [
       { get: 'dejafu-git', trigger: true },
-      { get: 'concurrency-cabal-git', trigger: true },
-      { get: 'dejafu-cabal-git', trigger: true },
-      { get: 'hunit-dejafu-cabal-git', trigger: true },
-      { get: 'tasty-dejafu-cabal-git', trigger: true },
       { get: 'stackage-feed', trigger: true },
       {
         task: 'Tag',
@@ -44,7 +87,6 @@ local test_snapshot_job =
                 cd dejafu-git
                 git rev-parse --short HEAD > ../tags/tag
                 echo "https://github.com/barrucadu/dejafu/commit/$(git rev-parse HEAD)" > ../tags/tag_url
-                #
                 jq -r .id < ../stackage-feed/item | cut -d/ -f4 > ../tags/resolver
                 echo "Automatic build against new resolver $(cat ../tags/resolver)" > ../tags/description
               |||,
@@ -54,59 +96,16 @@ local test_snapshot_job =
         on_failure: bad_event,
         on_error: bad_event,
       },
-      {
-        task: 'Build & Test',
-        config: {
-          platform: 'linux',
-          image_resource: {
-            type: 'docker-image',
-            source: { repository: 'haskell' },
-          },
-          inputs: [
-            { name: 'dejafu-git' },
-            { name: 'tags' },
-          ],
-          run: {
-            path: 'sh',
-            dir: 'dejafu-git',
-            args: [
-              '-cxe',
-              |||
-                resolver=$(cat ../tags/resolver)
-                stack="stack --no-terminal"
-
-                # don't build all the dejafu-bench dependencies to speed up compilation
-                # stack's docs suggest this should work: `stack build dejafu-tests:dejafu-tests`
-                # but it doesn't, it still builds dejafu-bench too
-                sed -n '/executable dejafu-bench/q;p' dejafu-tests/dejafu-tests.cabal > dejafu-tests.cabal
-                mv dejafu-tests.cabal dejafu-tests/dejafu-tests.cabal
-
-                # use a utf-8 locale so hedgehog failure output doesn't
-                # cause an encoding error - this was the default in the
-                # haskell:8.8.1 image but not after that.
-                export LANG=C.UTF-8
-
-                $stack init --resolver=$resolver --force
-                $stack setup
-                $stack build dejafu-tests
-                $stack exec dejafu-tests
-              |||,
-            ],
-          },
-        },
-        on_success: event('test', 'Ok'),
-        on_failure: event('test', 'Failure'),
-        on_error: event('test', 'Error'),
-      },
+      build_test_dejafu_task,
     ],
   };
 
-local deploy_job(package) =
+local test_job(package) =
   {
-    name: 'deploy-' + package,
+    name: 'test-' + package,
     public: true,
     plan: [
-      { get: 'dejafu-git', resource: package + '-cabal-git', trigger: true, passed: ['test-snapshot'] },
+      { get: 'dejafu-git', resource: package + '-cabal-git', trigger: true },
       {
         task: 'Tag',
         config: library['tag-builder_config'] {
@@ -124,6 +123,45 @@ local deploy_job(package) =
                 cd dejafu-git
                 git rev-parse --short HEAD > ../tags/tag
                 echo "https://github.com/barrucadu/dejafu/commit/$(git rev-parse HEAD)" > ../tags/tag_url
+                ver=$(grep '^version:' "${PACKAGE}/${PACKAGE}.cabal" | sed 's/^version: *//')
+                echo "${PACKAGE}-${ver}" > ../tags/description
+              |||,
+            ],
+          },
+        },
+        on_failure: bad_event,
+        on_error: bad_event,
+      },
+      build_test_dejafu_task,
+    ],
+  };
+
+local deploy_job(package) =
+  {
+    name: 'deploy-' + package,
+    public: true,
+    plan: [
+      { get: 'dejafu-git', resource: package + '-cabal-git', trigger: true, passed: ['test-' + package] },
+      {
+        task: 'Tag',
+        config: library['tag-builder_config'] {
+          inputs: [
+            { name: 'dejafu-git' },
+          ],
+          params: {
+            PACKAGE: package,
+          },
+          run: {
+            path: 'sh',
+            args: [
+              '-cxe',
+              |||
+                cd dejafu-git
+                git rev-parse --short HEAD > ../tags/tag
+                echo "https://github.com/barrucadu/dejafu/commit/$(git rev-parse HEAD)" > ../tags/tag_url
+                ver=$(grep '^version:' "${PACKAGE}/${PACKAGE}.cabal" | sed 's/^version: *//')
+                echo "$ver" > ../tags/pkg-ver
+                echo "${PACKAGE}-${ver}" > ../tags/description
               |||,
             ],
           },
@@ -156,11 +194,10 @@ local deploy_job(package) =
             args: [
               '-c',
               |||
-                ver=`grep '^version:' "${PACKAGE}/${PACKAGE}.cabal" | sed 's/^version: *//'`
-                echo "${PACKAGE}-${ver}" > ../tags/description
+                ver=$(cat ../tags/pkg-ver)
 
                 if curl -fs "http://hackage.haskell.org/package/${PACKAGE}-${ver}" >/dev/null; then
-                  echo "version already exists on hackage"
+                  echo "version already exists on hackage" >&2
                   echo "${PACKAGE}-${ver} (no deploy needed)" > ../tags/description
                   exit 0
                 fi
@@ -229,6 +266,10 @@ local deploy_job(package) =
 
   jobs: [
     test_snapshot_job,
+    test_job('concurrency'),
+    test_job('dejafu'),
+    test_job('hunit-dejafu'),
+    test_job('tasty-dejafu'),
     deploy_job('concurrency'),
     deploy_job('dejafu'),
     deploy_job('hunit-dejafu'),
