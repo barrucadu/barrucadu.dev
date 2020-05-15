@@ -13,7 +13,7 @@ local event(phase, status) = {
   put: 'dejafu-event-api',
   params: {
     path: 'tags',
-    phase: 'deploy',
+    phase: phase,
     status: status,
   },
 };
