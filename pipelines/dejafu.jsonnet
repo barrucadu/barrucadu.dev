@@ -186,7 +186,6 @@ local deploy_job(package) =
           ],
           params: {
             PACKAGE: package,
-            HACKAGE_PASSWORD: '{{hackage-password}}',
           },
           run: {
             path: 'sh',
@@ -234,14 +233,57 @@ local deploy_job(package) =
                 if $fail; then
                   exit 1
                 fi
-
-                stack --no-terminal setup
-                echo -e "barrucadu\n${HACKAGE_PASSWORD}\nn" | stack --no-terminal upload "$PACKAGE"
               |||,
             ],
           },
         },
-        on_success: event('deploy', 'Ok'),
+        on_success: {
+          task: 'Deploy',
+          config: {
+            platform: 'linux',
+            image_resource: {
+              type: 'docker-image',
+              source: { repository: 'haskell' },
+            },
+            inputs: [
+              { name: 'dejafu-git' },
+              { name: 'tags' },
+            ],
+            outputs: [
+              { name: 'tags' },
+            ],
+            params: {
+              PACKAGE: package,
+              HACKAGE_PASSWORD: '{{hackage-password}}',
+            },
+            run: {
+              path: 'sh',
+              dir: 'dejafu-git',
+              args: [
+                '-c',
+                |||
+                  ver=$(cat ../tags/pkg-ver)
+
+                  # yes, this is checked both here and in the
+                  # pre-deploy check.  this is because I don't want to
+                  # report "there is no version to deploy" as a
+                  # *failure*
+                  if curl -fs "http://hackage.haskell.org/package/${PACKAGE}-${ver}" >/dev/null; then
+                    echo "version already exists on hackage" >&2
+                    echo "${PACKAGE}-${ver} (no deploy needed)" > ../tags/description
+                    exit 0
+                  fi
+
+                  stack --no-terminal setup
+                  echo -e "barrucadu\n${HACKAGE_PASSWORD}\nn" | stack --no-terminal upload "$PACKAGE"
+                |||,
+              ],
+            },
+          },
+          on_success: event('deploy', 'Ok'),
+          on_failure: event('deploy', 'Failure'),
+          on_error: event('deploy', 'Error'),
+        },
         on_failure: event('deploy', 'Failure'),
         on_error: event('deploy', 'Error'),
       },
