@@ -254,6 +254,7 @@ local deploy_job(package) =
             ],
             params: {
               PACKAGE: package,
+              HACKAGE_USERNAME: 'barrucadu',
               HACKAGE_PASSWORD: '{{hackage-password}}',
             },
             run: {
@@ -275,7 +276,7 @@ local deploy_job(package) =
                   fi
 
                   stack --no-terminal setup
-                  echo -e "barrucadu\n${HACKAGE_PASSWORD}\nn" | stack --no-terminal upload "$PACKAGE"
+                  echo n | stack --no-terminal upload "$PACKAGE"
                 |||,
               ],
             },
