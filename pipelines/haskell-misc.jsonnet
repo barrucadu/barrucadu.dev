@@ -9,9 +9,9 @@ local both = simple_haskell('both');
     library.resource_type('feed-resource'),
   ],
 
-  resources: both.resources + [
+  resources: both.resources.all + [
     library.feed_resource('stackage', 'https://www.stackage.org/feed'),
   ],
 
-  jobs: both.jobs,
+  jobs: both.jobs.all(),
 }

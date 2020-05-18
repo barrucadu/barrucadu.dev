@@ -11,9 +11,10 @@ local irc_client = simple_haskell('irc-client');
     library.resource_type('feed-resource'),
   ],
 
-  resources: irc_ctcp.resources + irc_conduit.resources + irc_client.resources + [
+  resources: irc_ctcp.resources.all + irc_conduit.resources.all + irc_client.resources.all + [
     library.feed_resource('stackage', 'https://www.stackage.org/feed'),
   ],
 
-  jobs: irc_ctcp.jobs + irc_conduit.jobs + irc_client.jobs,
+  jobs:
+    irc_ctcp.jobs.all() + irc_conduit.jobs.all() + irc_client.jobs.all(),
 }
