@@ -212,6 +212,9 @@ local build_deploy_www_job =
   ],
 
   resources: [
+    // ap.barrucadu.co.uk
+    library.image_resource('pleroma'),
+    library.event_api_resource('pleroma', '{{event-api-pleroma-token}}'),
     // bookdb.barrucadu.co.uk
     library.git_resource('bookdb', 'https://github.com/barrucadu/bookdb.git'),
     library.image_resource('bookdb'),
@@ -234,5 +237,7 @@ local build_deploy_www_job =
     // bookdb
     library.build_push_docker_job('bookdb', 'bookdb'),
     library.deploy_docker_systemd_job('bookdb', 'dunwich.barrucadu.co.uk', '{{dunwich-ssh-private-key}}'),
+    // pleroma
+    library.deploy_docker_systemd_job('pleroma', 'dunwich.barrucadu.co.uk', '{{dunwich-ssh-private-key}}', null, 'nupleroma', false),
   ],
 }

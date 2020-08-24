@@ -166,14 +166,14 @@ local tag_builder_config = builder_config('tag') + {
       ],
     },
 
-  deploy_docker_systemd_job: function(name, host, key, event_resource_name=null)
+  deploy_docker_systemd_job: function(name, host, key, event_resource_name=null, service=null, passed=true)
     local ern = if event_resource_name == null then name else event_resource_name;
     {
       name: 'deploy-' + name,
       public: true,
       serial: true,
       plan: [
-        { get: name + '-image', trigger: true, passed: ['build-' + name] },
+        { get: name + '-image', trigger: true, [if passed then 'passed']: ['build-' + name] },
         {
           task: 'Tag',
           config: {
@@ -216,7 +216,7 @@ local tag_builder_config = builder_config('tag') + {
             },
             params: {
               HOST: host,
-              SERVICE: name,
+              SERVICE: if service == null then name else service,
               SSH_PRIVATE_KEY: key,
             },
             run: {
