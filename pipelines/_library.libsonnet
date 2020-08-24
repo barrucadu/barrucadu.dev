@@ -69,12 +69,13 @@ local tag_builder_config = builder_config('tag') + {
       },
     },
 
-  git_resource: function(name, uri, paths=null)
+  git_resource: function(name, uri, paths=null, branch=null)
     {
       name: name + '-git',
       type: 'git',
       source: {
         uri: uri,
+        [if branch != null then 'branch']: branch,
         [if paths != null then 'paths']: paths,
       },
     },
@@ -109,7 +110,7 @@ local tag_builder_config = builder_config('tag') + {
   'tag-builder_config': tag_builder_config,
 
   // jobs
-  build_push_docker_job: function(name, repo, event_resource_name=null, docker_path=null)
+  build_push_docker_job: function(name, repo, event_resource_name=null, docker_path=null, commit_url=null)
     local ern = if event_resource_name == null then name else event_resource_name;
     local dp = name + '-git/' + (if docker_path == null then '' else docker_path + '/');
     {
@@ -122,7 +123,7 @@ local tag_builder_config = builder_config('tag') + {
           config: tag_builder_config {
             inputs: [{ name: name + '-git', path: 'in' }],
             params: {
-              REPO: repo,
+              COMMIT_URL: if commit_url == null then 'https://github.com/barrucadu/' + repo + '/commit/' else commit_url,
             },
             run: {
               path: 'sh',
@@ -134,7 +135,7 @@ local tag_builder_config = builder_config('tag') + {
                   cd in
                   #
                   tag_name="$(git rev-parse --short HEAD)"
-                  tag_url="https://github.com/barrucadu/${REPO}/commit/$(git rev-parse HEAD)"
+                  tag_url="${COMMIT_URL}/$(git rev-parse HEAD)"
                   summary="$(git show -s --format=%s HEAD)"
                   #
                   echo $tag_name > ../tags/event/tag
