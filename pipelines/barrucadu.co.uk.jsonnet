@@ -219,6 +219,10 @@ local build_deploy_www_job =
     library.git_resource('bookdb', 'https://github.com/barrucadu/bookdb.git'),
     library.image_resource('bookdb'),
     library.event_api_resource('bookdb', '{{event-api-bookdb-token}}'),
+    // bookmarks.barrucadu.co.uk
+    library.git_resource('bookmarks', 'https://github.com/barrucadu/bookmarks.git'),
+    library.image_resource('bookmarks'),
+    library.event_api_resource('bookmarks', '{{event-api-bookmarks-token}}'),
     // memo.barrucadu.co.uk
     library.git_resource('memo', 'https://github.com/barrucadu/memo.barrucadu.co.uk.git'),
     library.rsync_resource('memo', 'dunwich.barrucadu.co.uk', '{{dunwich-ssh-private-key}}', '/srv/http/barrucadu.co.uk/memo'),
@@ -237,6 +241,9 @@ local build_deploy_www_job =
     // bookdb
     library.build_push_docker_job('bookdb', 'bookdb'),
     library.deploy_docker_systemd_job('bookdb', 'dunwich.barrucadu.co.uk', '{{dunwich-ssh-private-key}}'),
+    // bookmarks
+    library.build_push_docker_job('bookmarks', 'bookmarks'),
+    library.deploy_docker_systemd_job('bookmarks', 'dunwich.barrucadu.co.uk', '{{dunwich-ssh-private-key}}'),
     // pleroma
     library.deploy_docker_systemd_job('pleroma', 'dunwich.barrucadu.co.uk', '{{dunwich-ssh-private-key}}', null, 'nupleroma', false),
   ],
