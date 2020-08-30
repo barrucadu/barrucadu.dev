@@ -245,6 +245,6 @@ local build_deploy_www_job =
     library.build_push_docker_job('bookmarks', 'bookmarks'),
     library.deploy_docker_systemd_job('bookmarks', 'dunwich.barrucadu.co.uk', '{{dunwich-ssh-private-key}}'),
     // pleroma
-    library.deploy_docker_systemd_job('pleroma', 'dunwich.barrucadu.co.uk', '{{dunwich-ssh-private-key}}', null, 'nupleroma', false),
+    library.deploy_docker_systemd_job('pleroma', 'dunwich.barrucadu.co.uk', '{{dunwich-ssh-private-key}}', null, null, false),
   ],
 }

@@ -129,6 +129,6 @@ local build_deploy_frontend_job =
     // frontend
     build_deploy_frontend_job,
     // pleroma
-    library.deploy_docker_systemd_job('pleroma', 'lainon.life', '{{lainonlife-ssh-private-key}}', null, 'nupleroma', false),
+    library.deploy_docker_systemd_job('pleroma', 'lainon.life', '{{lainonlife-ssh-private-key}}', null, null, false),
   ],
 }
