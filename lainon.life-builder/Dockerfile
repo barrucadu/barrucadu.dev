@@ -1,6 +1,6 @@
 FROM nixos/nix:2.3
 
-RUN nix-channel --add https://nixos.org/channels/nixos-20.03 nixpkgs && \
+RUN nix-channel --add https://nixos.org/channels/nixos-20.09 nixpkgs && \
     nix-channel --update
 
 ENV LANG=en_GB.UTF-8 \
