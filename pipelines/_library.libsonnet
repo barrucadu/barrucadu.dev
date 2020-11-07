@@ -119,7 +119,7 @@ local tag_builder_config = builder_config('tag') + {
       plan: [
         { get: name + '-git', trigger: true },
         {
-          task: 'Tag',
+          task: 'tag',
           config: tag_builder_config {
             inputs: [{ name: name + '-git', path: 'in' }],
             params: {
@@ -175,7 +175,7 @@ local tag_builder_config = builder_config('tag') + {
       plan: [
         { get: name + '-image', trigger: true, [if passed then 'passed']: ['build-' + name] },
         {
-          task: 'Tag',
+          task: 'tag',
           config: {
             platform: 'linux',
             image_resource: {
@@ -205,7 +205,7 @@ local tag_builder_config = builder_config('tag') + {
           on_error: bad_event(ern),
         },
         {
-          task: 'Deploy',
+          task: 'deploy',
           config: {
             platform: 'linux',
             image_resource: {

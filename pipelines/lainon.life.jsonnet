@@ -27,7 +27,7 @@ local build_deploy_frontend_job =
           },
         };
       {
-        task: 'Tag',
+        task: 'tag',
         config: library['tag-builder_config'] {
           inputs: [{ name: 'lainonlife-git' }],
           run: {
@@ -47,7 +47,7 @@ local build_deploy_frontend_job =
         on_error: bad_event,
       },
       {
-        task: 'Build ',
+        task: 'build',
         config: library['lainon.life-builder_config'] {
           inputs: [{ name: 'lainonlife-git' }],
           outputs: [{ name: 'site' }],

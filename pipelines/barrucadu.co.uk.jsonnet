@@ -74,7 +74,7 @@ local build_deploy_memo_job =
     plan: [
       { get: 'memo-git', trigger: true },
       {
-        task: 'Tag',
+        task: 'tag',
         config: library['tag-builder_config'] {
           inputs: [{ name: 'memo-git' }],
           run: {
@@ -93,10 +93,10 @@ local build_deploy_memo_job =
         on_failure: bad_event('memo'),
         on_error: bad_event('memo'),
       },
-      { task: 'Build' } + run_buildpy_task('memo', 'tags'),
+      { task: 'build' } + run_buildpy_task('memo', 'tags'),
       rsync_task('memo', 'tags'),
       {
-        task: 'Notify',
+        task: 'notify',
         params: {
           PLEROMA_PASSWORD: '{{pleroma-user-memo-password}}',
         },
@@ -141,7 +141,7 @@ local build_deploy_www_job =
       { get: 'cv-git', trigger: true },
       { get: 'www-git', trigger: true },
       {
-        task: 'Tag',
+        task: 'tag',
         config: library['tag-builder_config'] {
           inputs: [
             { name: 'cv-git' },
@@ -175,9 +175,9 @@ local build_deploy_www_job =
         on_failure: bad_event('www'),
         on_error: bad_event('www'),
       },
-      { task: 'Build (site)' } + run_buildpy_task('www', 'tags/build-site'),
+      { task: 'build-site' } + run_buildpy_task('www', 'tags/build-site'),
       {
-        task: 'Build (cv)',
+        task: 'build-cv',
         config: library['barrucadu.co.uk-builder_config'] {
           inputs: [
             { name: 'cv-git' },

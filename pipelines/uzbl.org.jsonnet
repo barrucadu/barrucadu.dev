@@ -10,7 +10,7 @@ local tag_task(name, repo) =
     },
   };
   {
-    task: 'Tag',
+    task: 'tag',
     config: library['tag-builder_config'] {
       inputs: [{ name: name + '-git' }],
       params: {

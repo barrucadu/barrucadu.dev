@@ -44,7 +44,7 @@ function(package, repo=null, subfolder=null, event_api_resource=null, snapshot_f
         |||;
 
     {
-      task: 'Tag',
+      task: 'tag',
       config: library['tag-builder_config'] {
         inputs: [{ name: 'package-git' }] + (if snapshot_build then [{ name: 'stackage-feed' }] else []),
         params: {
@@ -74,7 +74,7 @@ function(package, repo=null, subfolder=null, event_api_resource=null, snapshot_f
       $stack build
     |||;
     {
-      task: 'Build & Test',
+      task: 'build-and-test',
       config: {
         platform: 'linux',
         image_resource: {
@@ -100,7 +100,7 @@ function(package, repo=null, subfolder=null, event_api_resource=null, snapshot_f
     };
 
   local deploy_task = {
-    task: 'Deploy',
+    task: 'deploy',
     config: {
       platform: 'linux',
       image_resource: {
@@ -174,7 +174,7 @@ function(package, repo=null, subfolder=null, event_api_resource=null, snapshot_f
         tag_task(false),
         if script == null then deploy_task else
           {
-            task: 'Predeploy Check',
+            task: 'predeploy-check',
             config: {
               platform: 'linux',
               image_resource: {
