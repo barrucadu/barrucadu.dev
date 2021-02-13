@@ -49,7 +49,15 @@ local build_deploy_blog_job =
       },
       {
         task: 'build',
-        config: library['barrucadu.co.uk-builder_config'] {
+        config: {
+          platform: 'linux',
+          image_resource: {
+            type: 'docker-image',
+            source: {
+              repository: 'python',
+              tag: 3.8,
+            },
+          },
           inputs: [
             { name: 'blog-git' },
             { name: 'tags' },
@@ -63,8 +71,6 @@ local build_deploy_blog_job =
             args: [
               '-cex',
               |||
-                virtualenv venv
-                source venv/bin/activate
                 pip install -r requirements.txt
                 PATH=.:$PATH ./build --out=../site/
               |||,
