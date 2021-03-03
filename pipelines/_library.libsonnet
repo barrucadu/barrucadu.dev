@@ -25,6 +25,7 @@ local builder_config(name) =
       source: {
         repository: 'registry.barrucadu.dev/' + name + '-builder',
         username: 'registry',
+        password: '{{docker-registry-password}}',
       },
     },
   };
@@ -43,6 +44,7 @@ local tag_builder_config = builder_config('tag') + {
       source: {
         repository: 'registry.barrucadu.dev/' + name,
         username: 'registry',
+        password: '{{docker-registry-password}}',
       },
     },
 
