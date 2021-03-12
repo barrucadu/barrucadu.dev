@@ -3,7 +3,6 @@ local library = import '_library.libsonnet';
 local build_deploy_frontend_job =
   {
     name: 'build-deploy-frontend',
-    public: true,
     serial: true,
     plan: [
       { get: 'lainonlife-git', trigger: true },

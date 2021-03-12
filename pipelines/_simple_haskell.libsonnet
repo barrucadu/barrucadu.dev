@@ -80,7 +80,6 @@ function(package, repo=null, subfolder=null, snapshot_filter_paths=null)
 
   local test_job(script=null) = {
     name: 'test-' + package,
-    public: true,
     plan: [
       { get: 'package-git', resource: package + '-cabal-git', trigger: true },
       build_test_task(false, script),
@@ -89,7 +88,6 @@ function(package, repo=null, subfolder=null, snapshot_filter_paths=null)
 
   local test_snapshot_job(script=null) = {
     name: 'test-snapshot-' + package,
-    public: true,
     plan: [
       { get: 'package-git', resource: package + '-git', trigger: true },
       { get: 'stackage-feed', trigger: true },
@@ -100,7 +98,6 @@ function(package, repo=null, subfolder=null, snapshot_filter_paths=null)
   local deploy_job(script=null) =
     {
       name: 'deploy-' + package,
-      public: true,
       plan: [
         { get: 'package-git', resource: package + '-cabal-git', trigger: true, passed: ['test-' + package] },
         if script == null then deploy_task else

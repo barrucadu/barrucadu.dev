@@ -77,7 +77,6 @@ local builder_config(name) =
     local dp = name + '-git/' + (if docker_path == null then '' else docker_path + '/');
     {
       name: 'build-' + name,
-      public: true,
       plan: [
         { get: name + '-git', trigger: true },
         {
@@ -94,7 +93,6 @@ local builder_config(name) =
   deploy_docker_systemd_job: function(name, host, key, service=null, passed=true)
     {
       name: 'deploy-' + name,
-      public: true,
       serial: true,
       plan: [
         { get: name + '-image', trigger: true, [if passed then 'passed']: ['build-' + name] },
