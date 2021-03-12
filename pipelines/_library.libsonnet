@@ -89,35 +89,10 @@ local tag_builder_config = builder_config('tag') + {
       plan: [
         { get: name + '-git', trigger: true },
         {
-          task: 'tag',
-          config: tag_builder_config {
-            inputs: [{ name: name + '-git', path: 'in' }],
-            params: {
-              COMMIT_URL: if commit_url == null then 'https://github.com/barrucadu/' + repo + '/commit/' else commit_url,
-            },
-            run: {
-              path: 'sh',
-              args: [
-                '-cxe',
-                |||
-                  cd in
-                  #
-                  tag_name="$(git rev-parse --short HEAD)"
-                  tag_url="${COMMIT_URL}/$(git rev-parse HEAD)"
-                  summary="$(git show -s --format=%s HEAD)"
-                  jq -n --arg tag_name "$tag_name" --arg tag_url "$tag_url" --arg summary "$summary" > ../tags/labels \
-                     '{ "barrucadu.tag.name": $tag_name, "barrucadu.tag.url": $tag_url, "barrucadu.summary": $summary}'
-                |||,
-              ],
-            },
-          },
-        },
-        {
           put: name + '-image',
           params: {
             build: dp,
             dockerfile: dp + 'Dockerfile',
-            labels_file: 'tags/labels',
             tag_as_latest: true,
           },
         },
