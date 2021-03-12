@@ -20,21 +20,22 @@ local build_script = |||
   # haskell:8.8.1 image but not after that.
   export LANG=C.UTF-8
 
-  if [ -f ../tags/resolver ]; then
-    resolver="$(cat ../tags/resolver)"
+  if [ -f ../stackage-feed/item ]; then
+    apt-get update && apt-get install -y jq
+    resolver="$(jq -r .id < ../stackage-feed/item | cut -d/ -f4)"
     $stack init --resolver="$resolver" --force
   fi
+
   $stack setup
   $stack build
   $stack exec dejafu-tests
 |||;
 
 local deploy_script = |||
-  ver=$(cat ../tags/pkg-ver)
+  ver=$(grep '^version:' "${CABAL_FILE}" | sed 's/^version: *//')
 
   if curl -fs "http://hackage.haskell.org/package/${PACKAGE}-${ver}" >/dev/null; then
     echo "version already exists on hackage" >&2
-    echo "${PACKAGE}-${ver} (no deploy needed)" > ../tags/description
     exit 0
   fi
 

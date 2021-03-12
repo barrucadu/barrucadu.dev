@@ -6,37 +6,13 @@ function(package, repo=null, subfolder=null, snapshot_filter_paths=null)
   local commit_url = repo_base_url + '/commit';
   local cabal_file = (if subfolder == null then '' else subfolder + '/') + package + '.cabal';
 
-  local tag_task(snapshot_build=false) =
-    local script =
-      |||
-        ver=$(grep '^version:' "${CABAL_FILE}" | sed 's/^version: *//')
-        echo "$ver" > ../tags/pkg-ver
-      ||| +
-      if snapshot_build then 'jq -r .id < ../stackage-feed/item | cut -d/ -f4 > ../tags/resolver' else '';
-
-    {
-      task: 'tag',
-      config: library['tag-builder_config'] {
-        inputs: [{ name: 'package-git' }] + (if snapshot_build then [{ name: 'stackage-feed' }] else []),
-        params: {
-          COMMIT_URL: commit_url,
-          PACKAGE: package,
-          CABAL_FILE: cabal_file,
-        },
-        run: {
-          path: 'sh',
-          dir: 'package-git',
-          args: ['-cxe', script],
-        },
-      },
-    };
-
-  local build_test_task(script=null) =
+  local build_test_task(snapshot_build=false, script=null) =
     local default_script = |||
       export LANG=C.UTF-8
       stack="stack --no-terminal"
-      if [ -f ../tags/resolver ]; then
-        resolver="$(cat ../tags/resolver)"
+      if [ -f ../stackage-feed/item ]; then
+        apt-get update && apt-get install -y jq
+        resolver="$(jq -r .id < ../stackage-feed/item | cut -d/ -f4)"
         $stack init --resolver="$resolver" --force
       fi
       $stack setup
@@ -52,7 +28,6 @@ function(package, repo=null, subfolder=null, snapshot_filter_paths=null)
         },
         inputs: [
           { name: 'package-git' },
-          { name: 'tags' },
         ],
         run: {
           path: 'sh',
@@ -75,12 +50,12 @@ function(package, repo=null, subfolder=null, snapshot_filter_paths=null)
       },
       inputs: [
         { name: 'package-git' },
-        { name: 'tags' },
       ],
       params: {
         PACKAGE: package,
         HACKAGE_USERNAME: 'barrucadu',
         HACKAGE_PASSWORD: '{{hackage-password}}',
+        CABAL_FILE: cabal_file,
       },
       run: {
         path: 'sh',
@@ -88,7 +63,7 @@ function(package, repo=null, subfolder=null, snapshot_filter_paths=null)
         args: [
           '-c',
           |||
-            ver=$(cat ../tags/pkg-ver)
+            ver=$(grep '^version:' "${CABAL_FILE}" | sed 's/^version: *//')
 
             if curl -fs "http://hackage.haskell.org/package/${PACKAGE}-${ver}" >/dev/null; then
               echo "version already exists on hackage" >&2
@@ -108,8 +83,7 @@ function(package, repo=null, subfolder=null, snapshot_filter_paths=null)
     public: true,
     plan: [
       { get: 'package-git', resource: package + '-cabal-git', trigger: true },
-      tag_task(false),
-      build_test_task(script),
+      build_test_task(false, script),
     ],
   };
 
@@ -119,8 +93,7 @@ function(package, repo=null, subfolder=null, snapshot_filter_paths=null)
     plan: [
       { get: 'package-git', resource: package + '-git', trigger: true },
       { get: 'stackage-feed', trigger: true },
-      tag_task(true),
-      build_test_task(script),
+      build_test_task(true, script),
     ],
   };
 
@@ -144,6 +117,7 @@ function(package, repo=null, subfolder=null, snapshot_filter_paths=null)
               ],
               params: {
                 PACKAGE: package,
+                CABAL_FILE: cabal_file,
               },
               run: {
                 path: 'sh',

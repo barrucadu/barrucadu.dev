@@ -11,12 +11,6 @@ local builder_config(name) =
     },
   };
 
-local tag_builder_config = builder_config('tag') + {
-  outputs: [
-    { name: 'tags' },
-  ],
-};
-
 {
   resource_type: function(name)
     {
@@ -77,8 +71,6 @@ local tag_builder_config = builder_config('tag') + {
   'barrucadu.co.uk-builder_config': builder_config('barrucadu.co.uk'),
 
   'lainon.life-builder_config': builder_config('lainon.life'),
-
-  'tag-builder_config': tag_builder_config,
 
   // jobs
   build_push_docker_job: function(name, repo, docker_path=null, commit_url=null)

@@ -28,12 +28,6 @@ local library = import '_library.libsonnet';
       paths=['lainon.life-builder/'],
     ),
     library.image_resource('lainon.life-builder'),
-    library.git_resource(
-      'tag-builder',
-      'https://github.com/barrucadu/barrucadu.dev.git',
-      paths=['tag-builder/'],
-    ),
-    library.image_resource('tag-builder'),
   ],
 
   jobs: [
@@ -58,11 +52,6 @@ local library = import '_library.libsonnet';
       'lainon.life-builder',
       'barrucadu.dev',
       docker_path='lainon.life-builder',
-    ),
-    library.build_push_docker_job(
-      'tag-builder',
-      'barrucadu.dev',
-      docker_path='tag-builder',
     ),
   ],
 }

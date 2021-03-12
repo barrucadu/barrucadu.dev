@@ -13,7 +13,6 @@ Docker images used to run Concourse [tasks][] in:
 
 - `barrucadu.co.uk-builder`: building my website, which needs TeXlive and a few other things.
 - `lainon.life-builder`: building lainon.life, which needs pipenv.
-- `tag-builder`: running "tag" tasks to generate details for the Haskell pipelines.  Needs git.
 
 [tasks]: https://concourse-ci.org/tasks.html
 
