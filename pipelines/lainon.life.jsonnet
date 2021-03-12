@@ -1,15 +1,5 @@
 local library = import '_library.libsonnet';
 
-local event(status, phase) =
-  {
-    put: 'lainonlife-event-api',
-    params: {
-      path: 'tags',
-      status: status,
-      phase: phase,
-    },
-  };
-
 local build_deploy_frontend_job =
   {
     name: 'build-deploy-frontend',
@@ -17,38 +7,17 @@ local build_deploy_frontend_job =
     serial: true,
     plan: [
       { get: 'lainonlife-git', trigger: true },
-      local bad_event =
-        {
-          put: 'lainonlife-event-api',
-          params: {
-            phase: 'tag',
-            description: 'Internal error, check build log.',
-            status: 'Error',
-          },
-        };
-      {
-        task: 'tag',
-        config: library['tag-builder_config'] {
-          inputs: [{ name: 'lainonlife-git' }],
-          run: {
-            dir: 'lainonlife-git',
-            path: 'sh',
-            args: [
-              '-cxe',
-              |||
-                git rev-parse --short HEAD > ../tags/tag
-                echo "https://github.com/barrucadu/lainonlife/commit/$(git rev-parse HEAD)" > ../tags/tag_url
-                git show -s --format=%s HEAD > ../tags/description
-              |||,
-            ],
-          },
-        },
-        on_failure: bad_event,
-        on_error: bad_event,
-      },
       {
         task: 'build',
-        config: library['lainon.life-builder_config'] {
+        config: {
+          platform: 'linux',
+          image_resource: {
+            type: 'docker-image',
+            source: {
+              repository: 'python',
+              tag: 3.8,
+            },
+          },
           inputs: [{ name: 'lainonlife-git' }],
           outputs: [{ name: 'site' }],
           run: {
@@ -82,6 +51,7 @@ local build_deploy_frontend_job =
                   }
                 }
                 EOF
+                pip install pipenv
                 pipenv install
                 pipenv run build config.json
                 mv _site/* ../../site/
@@ -89,9 +59,6 @@ local build_deploy_frontend_job =
             ],
           },
         },
-        on_success: event('Ok', 'build'),
-        on_failure: event('Failure', 'build'),
-        on_error: event('Error', 'build'),
       },
       {
         put: 'frontend-rsync',
@@ -99,11 +66,6 @@ local build_deploy_frontend_job =
           path: 'site',
           rsync_args: ['--delete'],
         },
-        on_success: event('Ok', 'deploy'),
-        // a failure here indicates an error with the resource
-        // config, so class this as an error.
-        on_failure: event('Error', 'deploy'),
-        on_error: event('Error', 'deploy'),
       },
     ],
   };
@@ -111,7 +73,6 @@ local build_deploy_frontend_job =
 
 {
   resource_types: [
-    library.resource_type('event-api-resource'),
     library.resource_type('rsync-resource'),
   ],
 
@@ -119,16 +80,14 @@ local build_deploy_frontend_job =
     // frontend
     library.git_resource('lainonlife', 'https://github.com/barrucadu/lainonlife.git', paths=['frontend/']),
     library.rsync_resource('frontend', 'lainon.life', '{{lainonlife-ssh-private-key}}', '/srv/http/www'),
-    library.event_api_resource('lainonlife', '{{event-api-lainonlife-token}}'),
     // pleroma
     library.image_resource('pleroma'),
-    library.event_api_resource('pleroma', '{{event-api-pleroma-token}}'),
   ],
 
   jobs: [
     // frontend
     build_deploy_frontend_job,
     // pleroma
-    library.deploy_docker_systemd_job('pleroma', 'lainon.life', '{{lainonlife-ssh-private-key}}', null, null, false),
+    library.deploy_docker_systemd_job('pleroma', 'lainon.life', '{{lainonlife-ssh-private-key}}', null, false),
   ],
 }

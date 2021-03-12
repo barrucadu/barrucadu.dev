@@ -1,10 +1,10 @@
 local library = import '_library.libsonnet';
 local simple_haskell = import '_simple_haskell.libsonnet';
 
-local concurrency = simple_haskell('concurrency', 'dejafu', 'concurrency', 'dejafu-event-api');
-local dejafu = simple_haskell('dejafu', 'dejafu', 'dejafu', 'dejafu-event-api', ['dejafu/', 'dejafu-tests/']);
-local hunit_dejafu = simple_haskell('hunit-dejafu', 'dejafu', 'hunit-dejafu', 'dejafu-event-api');
-local tasty_dejafu = simple_haskell('tasty-dejafu', 'dejafu', 'tasty-dejafu', 'dejafu-event-api');
+local concurrency = simple_haskell('concurrency', 'dejafu', 'concurrency');
+local dejafu = simple_haskell('dejafu', 'dejafu', 'dejafu', ['dejafu/', 'dejafu-tests/']);
+local hunit_dejafu = simple_haskell('hunit-dejafu', 'dejafu', 'hunit-dejafu');
+local tasty_dejafu = simple_haskell('tasty-dejafu', 'dejafu', 'tasty-dejafu');
 
 local build_script = |||
   stack="stack --no-terminal"
@@ -20,21 +20,22 @@ local build_script = |||
   # haskell:8.8.1 image but not after that.
   export LANG=C.UTF-8
 
-  if [ -f ../tags/resolver ]; then
-    resolver="$(cat ../tags/resolver)"
+  if [ -f ../stackage-feed/item ]; then
+    apt-get update && apt-get install -y jq
+    resolver="$(jq -r .id < ../stackage-feed/item | cut -d/ -f4)"
     $stack init --resolver="$resolver" --force
   fi
+
   $stack setup
   $stack build
   $stack exec dejafu-tests
 |||;
 
 local deploy_script = |||
-  ver=$(cat ../tags/pkg-ver)
+  ver=$(grep '^version:' "${CABAL_FILE}" | sed 's/^version: *//')
 
   if curl -fs "http://hackage.haskell.org/package/${PACKAGE}-${ver}" >/dev/null; then
     echo "version already exists on hackage" >&2
-    echo "${PACKAGE}-${ver} (no deploy needed)" > ../tags/description
     exit 0
   fi
 
@@ -74,7 +75,6 @@ local deploy_script = |||
 
 {
   resource_types: [
-    library.resource_type('event-api-resource'),
     library.resource_type('feed-resource'),
   ],
 
@@ -86,7 +86,6 @@ local deploy_script = |||
     hunit_dejafu.resources.cabal,
     tasty_dejafu.resources.cabal,
     //
-    library.event_api_resource('dejafu', '{{event-api-dejafu-token}}'),
     library.feed_resource('stackage', 'https://www.stackage.org/feed'),
   ],
 

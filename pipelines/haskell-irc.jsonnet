@@ -7,7 +7,6 @@ local irc_client = simple_haskell('irc-client');
 
 {
   resource_types: [
-    library.resource_type('event-api-resource'),
     library.resource_type('feed-resource'),
   ],
 
