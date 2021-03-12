@@ -3,7 +3,6 @@ local library = import '_library.libsonnet';
 local copy_git_to_rsync_job(name, repo) =
   {
     name: 'deploy-' + name,
-    public: true,
     serial: true,
     plan: [
       { get: name + '-git', trigger: true },

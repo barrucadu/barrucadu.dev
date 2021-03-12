@@ -40,7 +40,6 @@ local run_buildpy_task(name) =
 local build_deploy_memo_job =
   {
     name: 'build-deploy-memo',
-    public: true,
     serial: true,
     plan: [
       { get: 'memo-git', trigger: true },
@@ -82,7 +81,6 @@ local build_deploy_memo_job =
 local build_deploy_www_job =
   {
     name: 'build-deploy-www',
-    public: true,
     serial: true,
     plan: [
       { get: 'cv-git', trigger: true },

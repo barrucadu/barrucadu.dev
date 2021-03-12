@@ -3,7 +3,6 @@ local library = import '_library.libsonnet';
 local build_deploy_blog_job =
   {
     name: 'build-deploy-blog',
-    public: true,
     serial: true,
     plan: [
       { get: 'blog-git', trigger: true },
