@@ -9,7 +9,15 @@ local build_deploy_frontend_job =
       { get: 'lainonlife-git', trigger: true },
       {
         task: 'build',
-        config: library['lainon.life-builder_config'] {
+        config: {
+          platform: 'linux',
+          image_resource: {
+            type: 'docker-image',
+            source: {
+              repository: 'python',
+              tag: 3.8,
+            },
+          },
           inputs: [{ name: 'lainonlife-git' }],
           outputs: [{ name: 'site' }],
           run: {
@@ -43,6 +51,7 @@ local build_deploy_frontend_job =
                   }
                 }
                 EOF
+                pip install pipenv
                 pipenv install
                 pipenv run build config.json
                 mv _site/* ../../site/
