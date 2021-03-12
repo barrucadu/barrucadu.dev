@@ -1,47 +1,18 @@
 local library = import '_library.libsonnet';
 
-function(package, repo=null, subfolder=null, event_api_resource=null, snapshot_filter_paths=null)
+function(package, repo=null, subfolder=null, snapshot_filter_paths=null)
   local repo_base_url = 'https://github.com/barrucadu/' + (if repo == null then package else repo);
   local repo_url = repo_base_url + '.git';
   local commit_url = repo_base_url + '/commit';
   local cabal_file = (if subfolder == null then '' else subfolder + '/') + package + '.cabal';
-  local event_api = if event_api_resource == null then package + '-event-api' else event_api_resource;
-
-  local bad_event = {
-    put: event_api,
-    params: {
-      phase: 'tag',
-      description: 'Internal error, check build log.',
-      status: 'Error',
-    },
-  };
-
-  local event(phase, status) = {
-    put: event_api,
-    params: {
-      path: 'tags',
-      phase: phase,
-      status: status,
-    },
-  };
 
   local tag_task(snapshot_build=false) =
     local script =
       |||
-        git rev-parse --short HEAD > ../tags/tag
-        echo "${COMMIT_URL}/$(git rev-parse HEAD)" > ../tags/tag_url
         ver=$(grep '^version:' "${CABAL_FILE}" | sed 's/^version: *//')
         echo "$ver" > ../tags/pkg-ver
       ||| +
-      if snapshot_build then
-        |||
-          jq -r .id < ../stackage-feed/item | cut -d/ -f4 > ../tags/resolver
-          echo "Automatic build against new resolver $(cat ../tags/resolver)" > ../tags/description
-        |||
-      else
-        |||
-          echo "${PACKAGE}-${ver}" > ../tags/description
-        |||;
+      if snapshot_build then 'jq -r .id < ../stackage-feed/item | cut -d/ -f4 > ../tags/resolver' else '';
 
     {
       task: 'tag',
@@ -58,8 +29,6 @@ function(package, repo=null, subfolder=null, event_api_resource=null, snapshot_f
           args: ['-cxe', script],
         },
       },
-      on_failure: bad_event,
-      on_error: bad_event,
     };
 
   local build_test_task(script=null) =
@@ -94,9 +63,6 @@ function(package, repo=null, subfolder=null, event_api_resource=null, snapshot_f
           ],
         },
       },
-      on_success: event('test', 'Ok'),
-      on_failure: event('test', 'Failure'),
-      on_error: event('test', 'Error'),
     };
 
   local deploy_task = {
@@ -109,9 +75,6 @@ function(package, repo=null, subfolder=null, event_api_resource=null, snapshot_f
       },
       inputs: [
         { name: 'package-git' },
-        { name: 'tags' },
-      ],
-      outputs: [
         { name: 'tags' },
       ],
       params: {
@@ -129,7 +92,6 @@ function(package, repo=null, subfolder=null, event_api_resource=null, snapshot_f
 
             if curl -fs "http://hackage.haskell.org/package/${PACKAGE}-${ver}" >/dev/null; then
               echo "version already exists on hackage" >&2
-              echo "${PACKAGE}-${ver} (no deploy needed)" > ../tags/description
               exit 0
             fi
 
@@ -139,9 +101,6 @@ function(package, repo=null, subfolder=null, event_api_resource=null, snapshot_f
         ],
       },
     },
-    on_success: event('deploy', 'Ok'),
-    on_failure: event('deploy', 'Failure'),
-    on_error: event('deploy', 'Error'),
   };
 
   local test_job(script=null) = {
@@ -171,7 +130,6 @@ function(package, repo=null, subfolder=null, event_api_resource=null, snapshot_f
       public: true,
       plan: [
         { get: 'package-git', resource: package + '-cabal-git', trigger: true, passed: ['test-' + package] },
-        tag_task(false),
         if script == null then deploy_task else
           {
             task: 'predeploy-check',
@@ -183,10 +141,6 @@ function(package, repo=null, subfolder=null, event_api_resource=null, snapshot_f
               },
               inputs: [
                 { name: 'package-git' },
-                { name: 'tags' },
-              ],
-              outputs: [
-                { name: 'tags' },
               ],
               params: {
                 PACKAGE: package,
@@ -198,22 +152,18 @@ function(package, repo=null, subfolder=null, event_api_resource=null, snapshot_f
               },
             },
             on_success: deploy_task,
-            on_failure: event('deploy', 'Failure'),
-            on_error: event('deploy', 'Error'),
           },
       ],
     };
 
   local res_cabal = library.git_resource(package + '-cabal', repo_url, [cabal_file]);
   local res_top = library.git_resource(package, repo_url, snapshot_filter_paths);
-  local res_event_api = library.event_api_resource(package, '{{event-api-' + package + '-token}}');
 
   {
     resources: {
-      all: [res_cabal, res_top] + (if event_api_resource == null then [res_event_api] else []),
+      all: [res_cabal, res_top],
       cabal: res_cabal,
       top: res_top,
-      [if event_api_resource != null then 'event_api']: res_event_api,
     },
 
     jobs: {

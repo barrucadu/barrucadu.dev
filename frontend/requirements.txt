@@ -1,3 +1,0 @@
-faker
-flask
-requests

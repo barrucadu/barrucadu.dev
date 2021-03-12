@@ -5,7 +5,6 @@ local both = simple_haskell('both');
 
 {
   resource_types: [
-    library.resource_type('event-api-resource'),
     library.resource_type('feed-resource'),
   ],
 
