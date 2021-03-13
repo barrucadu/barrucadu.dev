@@ -20,6 +20,8 @@ server_key_file = os.path.join(home, ".ssh/server_key")
 
 with open(server_key_file, "w") as f:
     f.write(private_key)
+    if private_key[-1] != "\n":
+        f.write("\n")
 
 with open(os.path.join(home, ".ssh/config"), "w") as f:
     f.write("Host {}\n\tStrictHostKeyChecking no\n".format(server))
