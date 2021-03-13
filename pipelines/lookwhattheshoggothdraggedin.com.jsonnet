@@ -53,7 +53,7 @@ local build_deploy_blog_job =
 
   resources: [
     library.git_resource('blog', 'https://github.com/barrucadu/lookwhattheshoggothdraggedin.com.git'),
-    library.rsync_resource('blog', 'dunwich.barrucadu.co.uk', '{{dunwich-ssh-private-key}}', '/srv/http/lookwhattheshoggothdraggedin.com/www'),
+    library.rsync_resource('blog', 'dunwich.barrucadu.co.uk', '((dunwich-ssh-private-key))', '/srv/http/lookwhattheshoggothdraggedin.com/www'),
   ],
 
   jobs: [

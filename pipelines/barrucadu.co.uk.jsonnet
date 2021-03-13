@@ -48,7 +48,7 @@ local build_deploy_memo_job =
       {
         task: 'notify',
         params: {
-          PLEROMA_PASSWORD: '{{pleroma-user-memo-password}}',
+          PLEROMA_PASSWORD: '((pleroma-user-memo-password))',
         },
         config: {
           platform: 'linux',
@@ -127,11 +127,11 @@ local build_deploy_www_job =
     library.image_resource('bookmarks'),
     // memo.barrucadu.co.uk
     library.git_resource('memo', 'https://github.com/barrucadu/memo.barrucadu.co.uk.git'),
-    library.rsync_resource('memo', 'dunwich.barrucadu.co.uk', '{{dunwich-ssh-private-key}}', '/srv/http/barrucadu.co.uk/memo'),
+    library.rsync_resource('memo', 'dunwich.barrucadu.co.uk', '((dunwich-ssh-private-key))', '/srv/http/barrucadu.co.uk/memo'),
     // www.barrucadu.co.uk
     library.git_resource('cv', 'https://github.com/barrucadu/cv.git'),
     library.git_resource('www', 'https://github.com/barrucadu/barrucadu.co.uk.git'),
-    library.rsync_resource('www', 'dunwich.barrucadu.co.uk', '{{dunwich-ssh-private-key}}', '/srv/http/barrucadu.co.uk/www'),
+    library.rsync_resource('www', 'dunwich.barrucadu.co.uk', '((dunwich-ssh-private-key))', '/srv/http/barrucadu.co.uk/www'),
   ],
 
   jobs: [
@@ -140,11 +140,11 @@ local build_deploy_www_job =
     build_deploy_www_job,
     // bookdb
     library.build_push_docker_job('bookdb', 'bookdb'),
-    library.deploy_docker_systemd_job('bookdb', 'dunwich.barrucadu.co.uk', '{{dunwich-ssh-private-key}}'),
+    library.deploy_docker_systemd_job('bookdb', 'dunwich.barrucadu.co.uk', '((dunwich-ssh-private-key))'),
     // bookmarks
     library.build_push_docker_job('bookmarks', 'bookmarks'),
-    library.deploy_docker_systemd_job('bookmarks', 'dunwich.barrucadu.co.uk', '{{dunwich-ssh-private-key}}'),
+    library.deploy_docker_systemd_job('bookmarks', 'dunwich.barrucadu.co.uk', '((dunwich-ssh-private-key))'),
     // pleroma
-    library.deploy_docker_systemd_job('pleroma', 'dunwich.barrucadu.co.uk', '{{dunwich-ssh-private-key}}', null, false),
+    library.deploy_docker_systemd_job('pleroma', 'dunwich.barrucadu.co.uk', '((dunwich-ssh-private-key))', null, false),
   ],
 }

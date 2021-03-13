@@ -6,7 +6,7 @@ local builder_config(name) =
       source: {
         repository: 'registry.barrucadu.dev/' + name + '-builder',
         username: 'registry',
-        password: '{{docker-registry-password}}',
+        password: '((docker-registry-password))',
       },
     },
   };
@@ -19,7 +19,7 @@ local builder_config(name) =
       source: {
         repository: 'registry.barrucadu.dev/' + name,
         username: 'registry',
-        password: '{{docker-registry-password}}',
+        password: '((docker-registry-password))',
       },
     },
 
@@ -52,7 +52,7 @@ local builder_config(name) =
       source: {
         repository: 'registry.barrucadu.dev/' + name,
         username: 'registry',
-        password: '{{docker-registry-password}}',
+        password: '((docker-registry-password))',
       },
     },
 

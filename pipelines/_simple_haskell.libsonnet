@@ -54,7 +54,7 @@ function(package, repo=null, subfolder=null, snapshot_filter_paths=null)
       params: {
         PACKAGE: package,
         HACKAGE_USERNAME: 'barrucadu',
-        HACKAGE_PASSWORD: '{{hackage-password}}',
+        HACKAGE_PASSWORD: '((hackage-password))',
         CABAL_FILE: cabal_file,
       },
       run: {
