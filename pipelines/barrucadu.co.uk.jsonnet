@@ -78,39 +78,6 @@ local build_deploy_memo_job =
     ],
   };
 
-local build_deploy_www_job =
-  {
-    name: 'build-deploy-www',
-    serial: true,
-    plan: [
-      { get: 'cv-git', trigger: true },
-      { get: 'www-git', trigger: true },
-      { task: 'build-site' } + run_buildpy_task('www'),
-      {
-        task: 'build-cv',
-        config: library['barrucadu.co.uk-builder_config'] {
-          inputs: [
-            { name: 'cv-git' },
-            { name: 'site' },
-          ],
-          outputs: [{ name: 'site' }],
-          run: {
-            dir: 'cv-git',
-            path: 'sh',
-            args: [
-              '-cex',
-              |||
-                latexmk -pdf -xelatex cv-full.tex
-                mv cv-full.pdf ../site/www/cv.pdf
-              |||,
-            ],
-          },
-        },
-      },
-      rsync_task('www'),
-    ],
-  };
-
 {
   resource_types: [
     library.resource_type('rsync-resource'),
@@ -128,16 +95,11 @@ local build_deploy_www_job =
     // memo.barrucadu.co.uk
     library.git_resource('memo', 'https://github.com/barrucadu/memo.barrucadu.co.uk.git'),
     library.rsync_resource('memo', 'dunwich.barrucadu.co.uk', '((dunwich-ssh-private-key))', '/srv/http/barrucadu.co.uk/memo'),
-    // www.barrucadu.co.uk
-    library.git_resource('cv', 'https://github.com/barrucadu/cv.git'),
-    library.git_resource('www', 'https://github.com/barrucadu/barrucadu.co.uk.git'),
-    library.rsync_resource('www', 'dunwich.barrucadu.co.uk', '((dunwich-ssh-private-key))', '/srv/http/barrucadu.co.uk/www'),
   ],
 
   jobs: [
     // websites
     build_deploy_memo_job,
-    build_deploy_www_job,
     // bookdb
     library.build_push_docker_job('bookdb', 'bookdb'),
     library.deploy_docker_systemd_job('bookdb', 'dunwich.barrucadu.co.uk', '((dunwich-ssh-private-key))'),
