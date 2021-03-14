@@ -6,16 +6,6 @@ server.  The NixOS config is in the [nixfiles][] repository.
 
 [nixfiles]: https://github.com/barrucadu/nixfiles
 
-*-builder
----------
-
-Docker images used to run Concourse [tasks][] in:
-
-- `barrucadu.co.uk-builder`: building my website, which needs TeXlive and a few other things.
-
-[tasks]: https://concourse-ci.org/tasks.html
-
-
 *-resource
 ----------
 

@@ -15,13 +15,6 @@ local library = import '_library.libsonnet';
       paths=['feed-resource/'],
     ),
     library.image_resource('feed-resource'),
-    // builders
-    library.git_resource(
-      'barrucadu.co.uk-builder',
-      'https://github.com/barrucadu/barrucadu.dev.git',
-      paths=['barrucadu.co.uk-builder/'],
-    ),
-    library.image_resource('barrucadu.co.uk-builder'),
   ],
 
   jobs: [
@@ -35,12 +28,6 @@ local library = import '_library.libsonnet';
       'feed-resource',
       'barrucadu.dev',
       docker_path='feed-resource',
-    ),
-    // builders
-    library.build_push_docker_job(
-      'barrucadu.co.uk-builder',
-      'barrucadu.dev',
-      docker_path='barrucadu.co.uk-builder',
     ),
   ],
 }

@@ -1,16 +1,3 @@
-local builder_config(name) =
-  {
-    platform: 'linux',
-    image_resource: {
-      type: 'docker-image',
-      source: {
-        repository: 'registry.barrucadu.dev/' + name + '-builder',
-        username: 'registry',
-        password: '((docker-registry-password))',
-      },
-    },
-  };
-
 {
   resource_type: function(name)
     {
@@ -66,11 +53,6 @@ local builder_config(name) =
         remote_dir: path,
       },
     },
-
-  // task configs
-  'barrucadu.co.uk-builder_config': builder_config('barrucadu.co.uk'),
-
-  'lainon.life-builder_config': builder_config('lainon.life'),
 
   // jobs
   build_push_docker_job: function(name, repo, docker_path=null, commit_url=null)
