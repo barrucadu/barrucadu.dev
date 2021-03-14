@@ -76,17 +76,11 @@ local build_deploy_frontend_job =
   ],
 
   resources: [
-    // frontend
     library.git_resource('lainonlife', 'https://github.com/barrucadu/lainonlife.git', paths=['frontend/']),
     library.rsync_resource('frontend', 'lainon.life', '((lainonlife-ssh-private-key))', '/srv/http/www'),
-    // pleroma
-    library.image_resource('pleroma'),
   ],
 
   jobs: [
-    // frontend
     build_deploy_frontend_job,
-    // pleroma
-    library.deploy_docker_systemd_job('pleroma', 'lainon.life', '((lainonlife-ssh-private-key))', null, false),
   ],
 }

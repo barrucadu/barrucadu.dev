@@ -2,8 +2,6 @@ local library = import '_library.libsonnet';
 
 {
   resources: [
-    // ap.barrucadu.co.uk
-    library.image_resource('pleroma'),
     // bookdb.barrucadu.co.uk
     library.git_resource('bookdb', 'https://github.com/barrucadu/bookdb.git'),
     library.image_resource('bookdb'),
@@ -19,7 +17,5 @@ local library = import '_library.libsonnet';
     // bookmarks
     library.build_push_docker_job('bookmarks', 'bookmarks'),
     library.deploy_docker_systemd_job('bookmarks', 'dunwich.barrucadu.co.uk', '((dunwich-ssh-private-key))'),
-    // pleroma
-    library.deploy_docker_systemd_job('pleroma', 'dunwich.barrucadu.co.uk', '((dunwich-ssh-private-key))', null, false),
   ],
 }
