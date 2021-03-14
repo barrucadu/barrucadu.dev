@@ -71,43 +71,4 @@
         },
       ],
     },
-
-  deploy_docker_systemd_job: function(name, host, key, service=null, passed=true)
-    {
-      name: 'deploy-' + name,
-      serial: true,
-      plan: [
-        { get: name + '-image', trigger: true, [if passed then 'passed']: ['build-' + name] },
-        {
-          task: 'deploy',
-          config: {
-            platform: 'linux',
-            image_resource: {
-              type: 'docker-image',
-              source: {
-                repository: 'alpine',
-              },
-            },
-            params: {
-              HOST: host,
-              SERVICE: if service == null then name else service,
-              SSH_PRIVATE_KEY: key,
-            },
-            run: {
-              path: 'sh',
-              args: [
-                '-ce',
-                |||
-                  echo "$SSH_PRIVATE_KEY" > ssh-private-key
-                  chmod 600 ssh-private-key
-                  set -x
-                  apk add --no-cache openssh
-                  ssh -i ssh-private-key -o "StrictHostKeyChecking no" "concourse-deploy-robot@$HOST" sudo systemctl restart "$SERVICE"
-                |||,
-              ],
-            },
-          },
-        },
-      ],
-    },
 }
