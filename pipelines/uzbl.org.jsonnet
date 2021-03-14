@@ -25,7 +25,7 @@ local copy_git_to_rsync_job(name, repo) =
     library.git_resource('website', 'https://github.com/uzbl/uzbl-website.git'),
     library.git_resource('docs', 'https://github.com/uzbl/uzbl.git'),
     library.rsync_resource('website', 'dunwich.barrucadu.co.uk', '((dunwich-ssh-private-key))', '/srv/http/uzbl.org/www'),
-    library.rsync_resource('docs', 'dunwich.barrucadu.co.uk', '((dunwich-ssh-private-key))', '/srv/http/uzbl.org/docs'),
+    library.rsync_resource('docs', 'dunwich.barrucadu.co.uk', '((dunwich-ssh-private-key))', '/srv/http/uzbl.org/uzbl'),
   ],
 
   jobs: [
