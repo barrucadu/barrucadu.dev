@@ -12,15 +12,6 @@
 
   // resources
 
-  feed_resource: function(name, uri)
-    {
-      name: name + '-feed',
-      type: 'feed-resource',
-      source: {
-        uri: uri,
-      },
-    },
-
   git_resource: function(name, uri, paths=null, branch=null)
     {
       name: name + '-git',
