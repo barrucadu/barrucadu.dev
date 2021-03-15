@@ -34,17 +34,6 @@
       },
     },
 
-  rsync_resource: function(name, host, key, path)
-    {
-      name: name + '-rsync',
-      type: 'rsync-resource',
-      source: {
-        server: host,
-        private_key: key,
-        remote_dir: path,
-      },
-    },
-
   // jobs
   build_push_docker_job: function(name, repo, docker_path=null, commit_url=null)
     local dp = name + '-git/' + (if docker_path == null then '' else docker_path + '/');
